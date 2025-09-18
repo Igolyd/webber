@@ -1,0 +1,6 @@
+// stores/app/indexes (заглушки для будущих)
+export const useAccessibilityStore = /* ... пустой пока ... */
+export const useChatSettingsStore = /* ... пустой пока ... */
+export const useHotkeysStore = /* ... пустой пока ... */
+export const useLanguageStore = /* ... пустой пока ... */
+export const useStreamerModeStore = /* ... пустой пока ... */

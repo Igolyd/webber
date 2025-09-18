@@ -1,0 +1,77 @@
+<template>
+  <v-navigation-drawer
+    v-model="drawer"
+    rail
+    permanent
+    location="left"
+    class="groups-theme"
+  >
+    <v-container class="functional-panel">
+      <v-btn icon @click="openPrivateMessage" :title="'ЛС'">
+        <v-icon>mdi-message-text-outline</v-icon>
+      </v-btn>
+      <v-btn icon @click="$emit('toggleChannels')" :title="'Каналы'">
+        <v-icon>mdi-view-list</v-icon>
+      </v-btn>
+    </v-container>
+
+    <v-list density="compact" nav>
+      <v-list-item
+        v-for="group in groups"
+        :key="group.id"
+        @click="$emit('updateSelectedGroup', group.id)"
+        :active="group.id === selectedGroupId"
+        rounded="lg"
+      >
+        <template #prepend>
+          <v-avatar size="40">
+            <v-img :src="group.imageSrc" />
+          </v-avatar>
+        </template>
+      </v-list-item>
+    </v-list>
+  </v-navigation-drawer>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+
+interface Group {
+  id: number
+  name: string
+  imageSrc: string
+}
+
+const props = defineProps<{
+  groups: Group[]
+  selectedGroupId?: number
+}>()
+
+const emit = defineEmits<{
+  (e: 'updateSelectedGroup', id: number): void
+  (e: 'toggleChannels'): void
+}>()
+
+const drawer = ref(true)
+
+const openPrivateMessage = () => {
+  // TODO: заменить на роутер
+  window.location.href = '/'
+}
+</script>
+
+<style scoped>
+.groups-theme {
+  background-color: #2b2b2b;
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+.functional-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+}
+</style>
