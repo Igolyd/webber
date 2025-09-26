@@ -13,33 +13,25 @@
 
     <section class="content-scroll">
       <v-card flat class="messages-theme pa-0">
-        <v-virtual-scroll :items="messages" height="100%" item-height="56">
-          <template #default="{ item }">
-            <div class="message-item">
-              <strong class="message-author">{{ item.author }}</strong>
-              <span class="message-text">{{ item.content }}</span>
-            </div>
-          </template>
-        </v-virtual-scroll>
+        <ChatWindow
+          context="channel"
+          :channel-id="activeTextChannelId"
+        />
       </v-card>
     </section>
-
-    <footer class="content-composer">
-      <InputMulti @send="$emit('send', $event)" />
-    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import InputMulti from "~/components/InputMulti.vue";
+import ChatWindow from "../chat/ChatWindow.vue";
 
 defineProps<{
-  activeTextChannelName: string;
-  messages: { id: number; author: string; content: string }[];
-  isVideoRoomOpen: boolean;
-}>();
+  activeTextChannelName: string
+  activeTextChannelId: string
+  isVideoRoomOpen: boolean
+}>()
 
-defineEmits(["toggle-users", "toggle-video", "send"]);
+defineEmits(['toggle-users', 'toggle-video'])
 </script>
 
 <style scoped>
@@ -49,53 +41,29 @@ defineEmits(["toggle-users", "toggle-video", "send"]);
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1f1f1f;
+  background: transparent; /* было #1f1f1f */
 }
 .content-header {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #2c2c2c;
+  border-bottom: 1px solid var(--app-border-color);
 }
-.content-header .spacer {
-  flex: 1;
-}
+.content-header .spacer { flex: 1; }
 .content-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  padding: 8px;
+  padding: 0;
 }
 .messages-theme {
-  background: #292929;
+  background: transparent; /* было #1f1f1f */
   height: 100%;
   overflow: hidden;
 }
-.message-item {
-  display: flex;
-  gap: 8px;
-  padding: 8px 12px;
-  align-items: baseline;
-}
-.message-author {
-  color: #fff;
-}
-.message-text {
-  color: #ddd;
-  word-break: break-word;
-}
-.content-composer {
-  border-top: 1px solid #2c2c2c;
-  padding: 8px;
-  background: #1f1f1f;
-}
 @media (max-width: 600px) {
-  .content-scroll {
-    padding: 4px;
-  }
-  .content-header {
-    padding: 6px 8px;
-  }
+  .content-scroll { padding: 0; }
+  .content-header { padding: 6px 8px; }
 }
 </style>

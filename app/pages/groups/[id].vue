@@ -44,11 +44,10 @@
     <ContentArea
       class="content-area"
       :active-text-channel-name="activeTextChannelName"
-      :messages="messages"
+      :active-text-channel-id="state.activeTextChannelId"
       :is-video-room-open="isVideoRoomOpen"
       @toggle-users="toggleUsersDrawer"
       @toggle-video="toggleVideoRoom"
-      @send="sendMessage"
     />
     <ManagementChannel
       v-model="channelDialog"
@@ -81,8 +80,12 @@ import { useChannelsStore, type Channel } from "~/stores/channels";
 import { useDirectoriesStore } from "~/stores/directories";
 import ManagementChannel from "~/components/Groups/ManagmentChannel.vue";
 import ManagementDirectories from "~/components/Groups/ManagementDirectories.vue";
-type Msg = { id: number; author: string; content: string };
-type User = { id: number; name: string };
+import { useUsersStore } from "~/stores/users";
+import { useRolesStore } from "~/stores/roles";
+import { useAppearanceStore } from "~/stores/app/appearance";
+import { useThemeOverrideStore } from "~/stores/app/themeOverride";
+import { useGroupThemesStore } from "~/stores/groupThemes";
+
 const ui = useUiStore();
 const call = useCallStore();
 const profiles = useProfilesStore();
@@ -91,19 +94,18 @@ const router = useRouter();
 const groupsStore = useGroupsStore();
 const channelsStore = useChannelsStore();
 const directoriesStore = useDirectoriesStore();
+const usersStore = useUsersStore();
+const rolesStore = useRolesStore();
+
+const appearance = useAppearanceStore();
+const themeOverride = useThemeOverrideStore();
+const groupThemes = useGroupThemesStore();
+
 const { smAndDown } = useDisplay();
 const isSmAndDown = computed(() => smAndDown.value);
 const channelsDrawer = ref(true);
 const usersDrawer = ref(true);
 const state = reactive({
-  users: [
-    { id: 1, name: "John" },
-    { id: 2, name: "Jane" },
-  ] as User[],
-  messages: [
-    { id: 1, author: "John", content: "Hello" },
-    { id: 2, author: "Jane", content: "Hey!" },
-  ] as Msg[],
   activeTextChannelId: "" as string,
   isVideoRoomOpen: false,
 });
@@ -125,6 +127,7 @@ const groupsList = computed(() => groupsStore.groups);
 const currentGroupId = computed(() => String(route.params.id || ""));
 const activeGroupId = computed(() => groupsStore.activeGroupId);
 const selectedGroupName = computed(() => {
+  console.log(currentGroupId.value + "dwadwa");
   const g = groupsStore.getById(currentGroupId.value);
   return g?.name ?? "";
 });
@@ -174,6 +177,29 @@ function openCreateChannel() {
   channelDialog.value = true;
 }
 
+async function bootstrapGroup() {
+  // 1) Обеспечить наличие данных
+  groupsStore.ensureSeed();
+  usersStore.ensureSeed();
+
+  const gid = currentGroupId.value;
+  const group = groupsStore.getById(gid);
+
+  // 2) Если такой группы нет — редирект на первую доступную
+  if (!group) {
+    const fallback = groupsStore.groups[0]?.id;
+    if (fallback) {
+      router.replace(`/groups/${fallback}`);
+    }
+    return;
+  }
+  // 3) Активируем группу и прогреваем базовые сущности
+  groupsStore.setActiveGroup(gid);
+  rolesStore.ensureBaseRolesForGroup(gid);
+
+  // Каналы/директории — как было
+  ensureActiveGroupAndSeed();
+}
 function openEditChannel(chId: string) {
   const ch = channelsStore.getById(chId);
   if (!ch) return;
@@ -184,6 +210,19 @@ function openEditChannel(chId: string) {
     directoryId: ch.directoryId ?? null,
   };
   channelDialog.value = true;
+}
+function applyGroupThemeIfNeeded() {
+  const gid = currentGroupId.value;
+  if (!gid) {
+    themeOverride.set(null);
+    return;
+  }
+  if (appearance.preferPersonalThemeInGroups) {
+    themeOverride.set(null);
+    return;
+  }
+  const snap = groupThemes.get(gid);
+  themeOverride.set(snap || null);
 }
 function openCreateDirectory() {
   editingDirectory.value = undefined;
@@ -335,20 +374,25 @@ const activeTextChannelName = computed(() => {
   return ch?.name ?? "";
 });
 onMounted(() => {
-  ensureActiveGroupAndSeed();
+  bootstrapGroup();
+  applyGroupThemeIfNeeded();
 });
 watch(
   () => route.params.id,
   () => {
-    ensureActiveGroupAndSeed();
-  },
-  { immediate: false }
+    bootstrapGroup();
+    applyGroupThemeIfNeeded();
+  }
+);
+watch(
+  () => appearance.preferPersonalThemeInGroups,
+  () => applyGroupThemeIfNeeded()
 );
 function navigateToGroup(groupId: string) {
   router.push(`/groups/${groupId}`);
 }
 function openGroupSettings() {
-  router.push(`/SettingsGroups`);
+  router.push(`/groups/${currentGroupId.value}-settings`);
 }
 function invitePeople() {
   console.log("invite people");
@@ -368,14 +412,6 @@ function openPrivacySettings() {
 function selectTextChannel(id: string) {
   state.activeTextChannelId = id;
 }
-function sendMessage(text: string) {
-  if (!text?.trim()) return;
-  state.messages.push({
-    id: state.messages.length + 1,
-    author: "Igolyd",
-    content: text.trim(),
-  });
-}
 function viewUserProfile(id: number, name: string) {
   console.log("view profile", id, name);
 }
@@ -384,7 +420,6 @@ const toggleChannelsDrawer = () =>
 const toggleUsersDrawer = () => (usersDrawer.value = !usersDrawer.value);
 const toggleVideoRoom = () => (state.isVideoRoomOpen = !state.isVideoRoomOpen);
 const users = computed(() => state.users);
-const messages = computed(() => state.messages);
 const isVideoRoomOpen = computed({
   get: () => state.isVideoRoomOpen,
   set: (v) => (state.isVideoRoomOpen = v),

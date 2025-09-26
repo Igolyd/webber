@@ -13,6 +13,7 @@
     </template>
 
     <v-list density="compact">
+      
       <v-list-item @click="$emit('open-group-settings')">
         <template #prepend><v-icon>mdi-cog-outline</v-icon></template>
         <v-list-item-title>Настройки группы</v-list-item-title>

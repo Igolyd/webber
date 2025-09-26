@@ -4,7 +4,7 @@
     :permanent="!isSmAndDown"
     :temporary="isSmAndDown"
     width="360"
-    class="channels-theme"
+    class="theme-drawer-left"
     :scrim="isSmAndDown"
   >
     <div class="px-4 py-2 d-flex align-center justify-space-between">
@@ -91,3 +91,11 @@ const model = computed({
   set: (v: boolean) => emit("update:modelValue", v),
 });
 </script>
+<style scoped>
+.theme-drawer-left {
+  background-color: transparent !important;
+  color: var(--app-text-color);
+  border-right: 1px solid var(--app-border-color);
+  box-shadow: none !important;
+}
+</style>

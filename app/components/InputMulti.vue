@@ -25,7 +25,6 @@
             :max-rows="maxRows"
             auto-grow
             placeholder="Напишите сообщение..."
-            bg-color="#474747"
             color="white"
             class="custom-textarea"
             @keydown.enter.exact.prevent="onSubmit"
@@ -177,41 +176,26 @@ function onFileChange(e: Event) {
 
 <style scoped>
 .input-drawer {
-  border-top: 1px solid #2c2c2c;
-  background: #1f1f1f;
+  border-top: 1px solid var(--app-border-color);
+  background: transparent; /* общий фон виден */
 }
 
-/* Компактные отступы контейнера */
-.wrap {
-  padding: 8px 8px;
-}
+/* Контейнер */
+.wrap { padding: 8px 8px; }
 
-/* Более компактные интервалы между кнопками */
-.gap-1 {
-  gap: 6px;
+/* textarea на поверхности карточки */
+.custom-textarea :deep(.v-field) {
+  background: var(--app-card-bg) !important;
+  border: 1px solid var(--app-border-color);
+  border-radius: 8px;
 }
-
-/* Плейсхолдер */
-.custom-textarea ::placeholder {
-  color: #aaa;
-}
-
-/* Скрытый input для файлов */
-.d-none {
-  display: none !important;
-}
-
-/* Тюнинг плотности текстовой области */
 .custom-textarea :deep(textarea) {
   line-height: 20px;
   padding-top: 6px !important;
   padding-bottom: 6px !important;
   min-height: 0 !important;
 }
-
-/* Уменьшаем высоту solo-поля визуально */
-.custom-textarea :deep(.v-field) {
-  --v-input-padding-top: 0px;
-  --v-input-padding-bottom: 0px;
-}
+.custom-textarea ::placeholder { color: rgba(127,127,127,.8); }
+.d-none { display: none !important; }
+.gap-1 { gap: 6px; }
 </style>

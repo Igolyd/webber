@@ -1,4 +1,3 @@
-// stores/messages.ts
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import { computed } from 'vue'
@@ -7,8 +6,8 @@ export interface FileAttachment {
   id: string
   name: string
   size: number
-  type: string // MIME
-  dataUrl: string // base64 data URL (в демо-хранилище)
+  type: string
+  dataUrl: string
   width?: number
   height?: number
   duration?: number
@@ -20,10 +19,14 @@ export interface DirectMessage {
   id: string
   senderId: string
   recipientId: string
-  content: string // текст или комментарий к файлу
+  content: string
   createdAt: string
   type: MessageType
-  attachment?: FileAttachment
+  attachment?: FileAttachment | null
+  replyToId?: string
+  editedAt?: string
+  reactions?: Record<string, string[]> // emoji -> [userId]
+  pinned?: boolean
 }
 
 function makeConvoKey(a: string, b: string) {
@@ -33,7 +36,6 @@ function makeConvoKey(a: string, b: string) {
 export const useMessagesStore = defineStore('messages', () => {
   const messages = useStorage<DirectMessage[]>('app.dm', [])
 
-  // селекторы
   const convoKey = (a: string, b: string) => makeConvoKey(a, b)
 
   const getConversation = (a: string, b: string) => {
@@ -47,7 +49,6 @@ export const useMessagesStore = defineStore('messages', () => {
   }
 
   const listConversationsForUser = (userId: string) => {
-    // вернем по одному последнему сообщению на диалог
     const lastByKey = new Map<string, DirectMessage>()
     for (const m of messages.value) {
       if (m.senderId !== userId && m.recipientId !== userId) continue
@@ -60,8 +61,11 @@ export const useMessagesStore = defineStore('messages', () => {
 
   const totalCount = computed(() => messages.value.length)
 
-  // действия
-  function sendMessage(senderId: string, recipientId: string, content: string) {
+  function getById(id: string) {
+    return messages.value.find(m => m.id === id) || null
+  }
+
+  function sendMessage(senderId: string, recipientId: string, content: string, replyToId?: string) {
     const text = content.trim()
     if (!text) return
     const msg: DirectMessage = {
@@ -71,8 +75,11 @@ export const useMessagesStore = defineStore('messages', () => {
       content: text,
       createdAt: new Date().toISOString(),
       type: 'text',
+      replyToId,
+      reactions: {},
+      pinned: false,
     }
-    messages.value = [...messages.value, msg] // иммутабельно — надежно для персиста
+    messages.value = [...messages.value, msg]
     return msg
   }
 
@@ -80,19 +87,38 @@ export const useMessagesStore = defineStore('messages', () => {
     senderId: string,
     recipientId: string,
     attachment: FileAttachment,
-    comment: string = ''
+    comment: string = '',
+    replyToId?: string
   ) {
     const msg: DirectMessage = {
       id: crypto.randomUUID(),
       senderId,
       recipientId,
-      content: comment.trim(),
+      content: (comment || '').trim(),
       createdAt: new Date().toISOString(),
       type: 'file',
       attachment,
+      replyToId,
+      reactions: {},
+      pinned: false,
     }
     messages.value = [...messages.value, msg]
     return msg
+  }
+
+  // Универсальный патч: меняем текст и/или вложение; корректируем type
+  function editMessage(id: string, patch: { content?: string; attachment?: FileAttachment | null }) {
+    messages.value = messages.value.map(m => {
+      if (m.id !== id) return m
+      let type = m.type
+      let attachment = m.attachment
+      if (patch.attachment !== undefined) {
+        attachment = patch.attachment
+        type = attachment ? 'file' : 'text'
+      }
+      const content = patch.content !== undefined ? patch.content : m.content
+      return { ...m, content, attachment, type, editedAt: new Date().toISOString() }
+    })
   }
 
   function deleteMessage(messageId: string) {
@@ -107,18 +133,50 @@ export const useMessagesStore = defineStore('messages', () => {
     })
   }
 
+  // Реакции
+  function toggleReaction(id: string, emoji: string, userId: string) {
+    messages.value = messages.value.map(m => {
+      if (m.id !== id) return m
+      const reactions = { ...(m.reactions || {}) }
+      const users = new Set(reactions[emoji] || [])
+      if (users.has(userId)) users.delete(userId)
+      else users.add(userId)
+      reactions[emoji] = Array.from(users)
+      return { ...m, reactions }
+    })
+  }
+
+  // Закрепы
+  function togglePin(id: string, pinned?: boolean) {
+    messages.value = messages.value.map(m =>
+      m.id === id ? { ...m, pinned: pinned ?? !m.pinned } : m
+    )
+  }
+
+  function getPinnedInConversation(a: string, b: string) {
+    const [x, y] = [a, b].sort()
+    return messages.value
+      .filter(m => {
+        const [sx, sy] = [m.senderId, m.recipientId].sort()
+        return sx === x && sy === y && m.pinned
+      })
+      .sort((m1, m2) => m1.createdAt.localeCompare(m2.createdAt))
+  }
+
   return {
-    // state
     messages,
-    // getters/selectors
     convoKey,
     getConversation,
     listConversationsForUser,
     totalCount,
-    // actions
+    getById,
+    getPinnedInConversation,
     sendMessage,
     sendAttachment,
+    editMessage,
     deleteMessage,
     clearConversation,
+    toggleReaction,
+    togglePin,
   }
 })

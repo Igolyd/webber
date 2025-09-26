@@ -5,7 +5,7 @@
     :permanent="!isSmAndDown"
     :temporary="isSmAndDown"
     :width="width"
-    class="left-nav-theme"
+     class="theme-drawer-left"
   >
     <div class="px-4 pt-4 pb-2">
       <div class="toolbar-header">
@@ -278,27 +278,15 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.left-nav-theme {
-  background: #111;
-  color: #fff;
+.theme-drawer-left {
+  background-color: transparent !important; /* ключ */
+  color: var(--app-text-color);
+  border-right: 1px solid var(--app-border-color);
+  /* можно убрать тени, если мешают */
+  box-shadow: none !important;
 }
-.toolbar-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 8px 6px;
-  border-radius: 6px;
-  user-select: none;
-}
-.nav-item:hover {
-  background-color: #2b2b2b;
-}
-.w-100 {
-  width: 100%;
-}
+.toolbar-header { display: flex; flex-direction: column; gap: 4px; }
+.nav-item { display: flex; align-items: center; cursor: pointer; padding: 8px 6px; border-radius: 6px; user-select: none; transition: background-color .15s ease; }
+.nav-item:hover { background-color: color-mix(in oklab, var(--app-card-bg) 80%, #fff 20%); }
+.w-100 { width: 100%; }
 </style>

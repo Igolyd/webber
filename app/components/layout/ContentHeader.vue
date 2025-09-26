@@ -65,7 +65,7 @@ export default defineComponent({
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #2c2c2c;
+  border-bottom: 1px solid var(--app-border-color);
 }
 .content-header .spacer {
   flex: 1;

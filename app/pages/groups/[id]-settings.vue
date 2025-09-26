@@ -31,6 +31,7 @@ type SectionKey =
   | 'emojis'
   | 'stickers'
   | 'soundboard'
+  | 'appearance'
   | 'members'
   | 'roles'
   | 'permissions'
@@ -40,7 +41,7 @@ type SectionKey =
   | 'template'
   | 'delete'
 const validSections: SectionKey[] = [
-  'profile','serverTag','emojis','stickers','soundboard','members','roles','permissions','safety','auditLog','bans','template','delete',
+  'profile','serverTag','emojis','stickers','soundboard','members','roles','permissions','safety','auditLog','bans','template','delete','appearance',
 ]
 
 const route = useRoute()
@@ -84,7 +85,7 @@ const map: Record<string, any> = {
   // 1. Настройки группы
   'group:profile':   makeAsync(() => import('~/components/GroupsSettings/GroupProfile.vue')),
   'group:serverTag': makeAsync(() => import('~/components/GroupsSettings/GroupServerTag.vue')),
-
+'group:appearance': makeAsync(() => import('~/components/GroupsSettings/GroupAppearance.vue')),
   // 2. Реакции
   'reactions:emojis':     makeAsync(() => import('~/components/GroupsSettings/ReactionsEmojis.vue')),
   'reactions:stickers':   makeAsync(() => import('~/components/GroupsSettings/ReactionsStickers.vue')),

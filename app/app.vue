@@ -1,25 +1,73 @@
 <template>
-  <v-app>
+  <v-app class="theme-root">
+    <!-- База: общий фон -->
+    <div class="app-bg-base"></div>
+    <!-- Overlay для читаемости поверх картинок -->
+    <div class="app-bg-overlay"></div>
+
     <v-app-bar color="black" elevation="0" height="48">
       <v-spacer />
-      <h2 class="text-white">Gentvin</h2>
+      <v-avatar :size="30" :rounded="99999">
+        <v-img :src="defaultLogo" cover />
+      </v-avatar>
       <v-spacer />
     </v-app-bar>
 
     <v-main class="app-main">
       <NuxtPage />
     </v-main>
+
     <client-only>
       <CallWindowProvider />
     </client-only>
+
+    <!-- Theme bridge для Vuetify -->
+    <ThemeBridge />
   </v-app>
 </template>
 
 <script setup lang="ts">
 import CallWindowProvider from "~/components/CallWindowProvider.vue";
+import defaultLogo from "./assets/app/logo.png"
+import ThemeBridge from "./components/system/ThemeBridge.vue";
 </script>
 
-<style scoped>
+<style>
+/* v-app делаем "прозрачным", фоном рулит .app-bg-base */
+.v-application {
+  background: transparent !important;
+  position: relative;
+  z-index: 1;
+}
+
+.theme-root {
+  color: var(--app-text-color);
+}
+
+/* Общий фон-контейнер — одна «единая» картинка на всё приложение */
+.app-bg-base {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: var(--app-bg-color);
+  background-image: var(--app-bg-image);
+  background-size: var(--app-bg-size);
+  background-position: var(--app-bg-position);
+  background-repeat: var(--app-bg-repeat);
+  will-change: transform;
+}
+
+/* Overlay для контраста текста */
+.app-bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--app-bg-overlay-color);
+  opacity: var(--app-bg-overlay-opacity);
+}
+
+/* Контент ниже app-bar */
 .app-main {
   height: calc(100vh - 48px);
 }

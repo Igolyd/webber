@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { useUserAccountStore } from '@/stores/user/account'
+import { useGroupsStore } from '@/stores/groups' // NEW
 
 export interface GroupMembership {
   groupId: string
@@ -50,10 +51,9 @@ function slugifyUniqueName(input: string) {
 }
 
 export const useUsersStore = defineStore('users', () => {
-  // useStorage возвращает Ref<AppUser[]>, это ок для setup-стора
   const users = useStorage<AppUser[]>('app.users', [])
 
-  // GETTERS (как функции/computed)
+  // GETTERS
   const getById = (id: string) => users.value.find(u => u.id === id) || null
 
   const getByUniqueName = (uniqueName: string) =>
@@ -93,7 +93,6 @@ export const useUsersStore = defineStore('users', () => {
   // ACTIONS
   function addUser(payload: Partial<AppUser> & { name: string; uniqueName?: string }) {
     const now = new Date().toISOString()
-    // гарантируем уникальность uniqueName
     let uniqueName = payload.uniqueName ? slugifyUniqueName(payload.uniqueName) : slugifyUniqueName(payload.name)
     const base = uniqueName || 'user'
     let suffix = 0
@@ -142,7 +141,6 @@ export const useUsersStore = defineStore('users', () => {
     if (idx === -1) return
     const current = users.value[idx]
 
-    // нельзя менять uniqueName на пустой/дубликат
     if (partial.uniqueName) {
       const norm = slugifyUniqueName(partial.uniqueName)
       if (!norm) return
@@ -152,7 +150,6 @@ export const useUsersStore = defineStore('users', () => {
     }
 
     const updated = { ...current, ...partial }
-    // иммутабельная замена, чтобы гарантировать запись в localStorage
     users.value = users.value.map(x => (x.id === userId ? updated : x))
   }
 
@@ -231,7 +228,7 @@ export const useUsersStore = defineStore('users', () => {
     users.value = users.value.map(x => (x.id === userId ? newU : x.id === friendId ? (newF as AppUser) : x))
   }
 
-  // первичное наполнение (5 пользователей, 2 — друзья текущего)
+  // первичное наполнение (5 пользователей, +2 — друзья текущего)
   function ensureSeed() {
     if (users.value.length > 0) return
 
@@ -239,7 +236,7 @@ export const useUsersStore = defineStore('users', () => {
       name: 'Alice Johnson',
       uniqueName: 'alice',
       avatar: '/avatars/alice.jpg',
-      banner: '/banners/alice.jpg',
+      banner: '#f5c542', // уже задано тобой
       badge: { id: 'vip', label: 'VIP', color: '#f5c542' },
       decoration: { id: 'rings', name: 'Rings' },
       effects: [{ id: 'glow', name: 'Glow', intensity: 2 }],
@@ -252,7 +249,7 @@ export const useUsersStore = defineStore('users', () => {
       name: 'Bob Martin',
       uniqueName: 'bob',
       avatar: '/avatars/bob.jpg',
-      banner: '/banners/bob.jpg',
+      banner: '#42a5f5', // NEW: синий
       badge: null,
       decoration: { id: 'lines', name: 'Lines' },
       effects: [],
@@ -265,7 +262,7 @@ export const useUsersStore = defineStore('users', () => {
       name: 'Charlie Kim',
       uniqueName: 'charlie',
       avatar: '/avatars/charlie.jpg',
-      banner: '/banners/charlie.jpg',
+      banner: '#66bb6a', // NEW: зелёный
       badge: { id: 'mod', label: 'Moderator', color: '#4caf50' },
       decoration: { id: 'sparkles', name: 'Sparkles' },
       effects: [{ id: 'shadow', name: 'Shadow', intensity: 1 }],
@@ -278,7 +275,7 @@ export const useUsersStore = defineStore('users', () => {
       name: 'Diana Ross',
       uniqueName: 'diana',
       avatar: '/avatars/diana.jpg',
-      banner: '/banners/diana.jpg',
+      banner: '#ab47bc', // NEW: фиолетовый
       badge: null,
       decoration: null,
       effects: [],
@@ -291,7 +288,7 @@ export const useUsersStore = defineStore('users', () => {
       name: 'Ethan Page',
       uniqueName: 'ethan',
       avatar: '/avatars/ethan.jpg',
-      banner: '/banners/ethan.jpg',
+      banner: '#ef5350', // NEW: красный
       badge: { id: 'founder', label: 'Founder', color: '#ff6b6b' },
       decoration: null,
       effects: [],
@@ -314,6 +311,19 @@ export const useUsersStore = defineStore('users', () => {
       account.username = me.uniqueName
     }
 
+    // NEW: создаём 2 группы и добавляем в них двух разных пользователей
+    const groupsStore = useGroupsStore()
+    const [g1, g2] = groupsStore.ensureSeed()
+
+    // u1 -> группа 1, u2 -> группа 2
+    addUserToGroup(u1.id, g1.id)
+    addUserToGroup(u2.id, g2.id)
+
+    // При желании можно добавить "me" в обе группы:
+    // addUserToGroup(me.id, g1.id)
+    // addUserToGroup(me.id, g2.id)
+
+    // Дружба
     addFriend(me.id, u1.id, true)
     addFriend(me.id, u2.id, true)
   }

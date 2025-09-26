@@ -1,7 +1,6 @@
 <!-- pages/index.vue -->
 <template>
   <v-container fluid class="h-100 d-flex pa-0">
-    <!-- Левый Drawer как компонент -->
     <AppLeftDrawer
       ref="leftDrawerRef"
       v-model="leftDrawer"
@@ -10,7 +9,6 @@
       :width="360"
     />
 
-    <!-- Центральная колонка -->
     <div class="content-area">
       <ContentHeader
         :title="activeCategoryName"
@@ -36,11 +34,9 @@
 
       <section class="content-scroll">
         <v-card flat class="list-card">
-          <!-- Группы -->
           <template v-if="activeCategoryId === 1">
             <GroupList :groups="groupsStore.groups" @opened="onOpenFromList" />
           </template>
-          <!-- Личные сообщения -->
           <template v-else>
             <FriendList :friends="myFriends" />
           </template>
@@ -48,7 +44,6 @@
       </section>
     </div>
 
-    <!-- Правая панель -->
     <ActivityUserTab
       v-model="rightDrawer"
       :permanent="!isSmAndDown"
@@ -81,6 +76,7 @@ export default defineComponent({
   setup() {
     const groupsStore = useGroupsStore()
     const usersStore = useUsersStore()
+    groupsStore.ensureSeed()
     usersStore.ensureSeed()
 
     const { smAndDown } = useDisplay()
@@ -138,22 +134,26 @@ export default defineComponent({
 
 <style scoped>
 .h-100 { height: 100%; }
+
+/* Внутренняя поверхность */
 .content-area {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1f1f1f;
+   background: transparent;
 }
+
 .content-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   padding: 8px;
 }
+
 .list-card {
-  background: #292929;
+  background: var(--app-card-bg);
   height: 100%;
   overflow: auto;
 }

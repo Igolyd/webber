@@ -8,27 +8,45 @@
   >
     <v-list density="compact">
       <v-list-subheader>Настройки группы</v-list-subheader>
-      <v-list-item @click="select('group','profile')">Профиль группы</v-list-item>
-      <v-list-item @click="select('group','serverTag')">Тэг сервера</v-list-item>
-
+      <v-list-item @click="select('group', 'profile')"
+        >Профиль группы</v-list-item
+      >
+      <v-list-item @click="select('group', 'serverTag')"
+        >Тэг сервера</v-list-item
+      >
+      <v-list-item @click="select('group', 'appearance')"
+        >Внешний вид</v-list-item
+      >
       <v-list-subheader>Реакции</v-list-subheader>
-      <v-list-item @click="select('reactions','emojis')">Эмодзи</v-list-item>
-      <v-list-item @click="select('reactions','stickers')">Стикеры</v-list-item>
-      <v-list-item @click="select('reactions','soundboard')">Звуковая панель</v-list-item>
+      <v-list-item @click="select('reactions', 'emojis')">Эмодзи</v-list-item>
+      <v-list-item @click="select('reactions', 'stickers')"
+        >Стикеры</v-list-item
+      >
+      <v-list-item @click="select('reactions', 'soundboard')"
+        >Звуковая панель</v-list-item
+      >
 
       <v-list-subheader>Люди</v-list-subheader>
-      <v-list-item @click="select('people','members')">Участники</v-list-item>
-      <v-list-item @click="select('people','roles')">Роли</v-list-item>
-      <v-list-item @click="select('people','permissions')">Доступ</v-list-item>
+      <v-list-item @click="select('people', 'members')">Участники</v-list-item>
+      <v-list-item @click="select('people', 'roles')">Роли</v-list-item>
+      <v-list-item @click="select('people', 'permissions')">Доступ</v-list-item>
 
       <v-list-subheader>Модерация</v-list-subheader>
-      <v-list-item @click="select('moderation','safety')">Настройка безопасности</v-list-item>
-      <v-list-item @click="select('moderation','auditLog')">Журнал аудита</v-list-item>
-      <v-list-item @click="select('moderation','bans')">Баны</v-list-item>
+      <v-list-item @click="select('moderation', 'safety')"
+        >Настройка безопасности</v-list-item
+      >
+      <v-list-item @click="select('moderation', 'auditLog')"
+        >Журнал аудита</v-list-item
+      >
+      <v-list-item @click="select('moderation', 'bans')">Баны</v-list-item>
 
       <v-list-subheader>Дополнительные настройки</v-list-subheader>
-      <v-list-item @click="select('advanced','template')">Шаблон группы</v-list-item>
-      <v-list-item @click="select('advanced','delete')">Удалить группу</v-list-item>
+      <v-list-item @click="select('advanced', 'template')"
+        >Шаблон группы</v-list-item
+      >
+      <v-list-item @click="select('advanced', 'delete')"
+        >Удалить группу</v-list-item
+      >
     </v-list>
 
     <template #append>
@@ -48,36 +66,37 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed } from "vue";
+import { useRoute } from "vue-router";
 
 // Типы ключей
-type GroupKey = 'group' | 'reactions' | 'people' | 'moderation' | 'advanced'
+type GroupKey = "group" | "reactions" | "people" | "moderation" | "advanced";
 type SectionKey =
-  | 'profile'
-  | 'serverTag'
-  | 'emojis'
-  | 'stickers'
-  | 'soundboard'
-  | 'members'
-  | 'roles'
-  | 'permissions'
-  | 'safety'
-  | 'auditLog'
-  | 'bans'
-  | 'template'
-  | 'delete'
+  | "profile"
+  | "serverTag"
+  | "appearance"
+  | "emojis"
+  | "stickers"
+  | "soundboard"
+  | "members"
+  | "roles"
+  | "permissions"
+  | "safety"
+  | "auditLog"
+  | "bans"
+  | "template"
+  | "delete";
 
 const emit = defineEmits<{
-  (e: 'navigate', payload: { group: GroupKey; section: SectionKey }): void
-}>()
+  (e: "navigate", payload: { group: GroupKey; section: SectionKey }): void;
+}>();
 
 function select(group: GroupKey, section: SectionKey) {
-  emit('navigate', { group, section })
+  emit("navigate", { group, section });
 }
 
-const route = useRoute()
-const backUrl = computed(() => `/groups/${route.params.id}`)
+const route = useRoute();
+const backUrl = computed(() => `/groups/${route.params.id}`);
 </script>
 
 <style scoped>

@@ -74,7 +74,7 @@
               <template #prepend>
                 <v-avatar size="28" :color="role.color" class="mr-3">
                   <v-img v-if="role.icon" :src="role.icon" cover />
-                  <span v-else class="text-white text-caption">R</span>
+                  <span v-else class="text-white text-caption">{{ role.name?.trim()?.[0]?.toUpperCase() || 'R' }}</span>
                 </v-avatar>
               </template>
               <v-list-item-title>{{ role.name }}</v-list-item-title>

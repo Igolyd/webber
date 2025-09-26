@@ -1,17 +1,16 @@
-// stores/app/appearance.ts
+// stores/app/appearance.ts (фрагмент)
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
+import { ref } from 'vue'
 
-export type Theme = 'light' | 'dark' | 'custom'
+type Theme = 'light' | 'dark' | 'custom'
 
 export const useAppearanceStore = defineStore('appearance', () => {
-  const theme = useLocalStorage<Theme>('app-theme', 'dark')
+  const theme = useLocalStorage<Theme>('app.theme', 'dark')
+  const preferPersonalThemeInGroups = useLocalStorage<boolean>('app.preferPersonalThemeInGroups', false)
 
-  watch(theme, (val) => {
-    document.documentElement.setAttribute('data-theme', val)
-    // Для Vuetify: vuetify.framework.theme.global.name = val
-  }, { immediate: true })
+  function setTheme(t: Theme) { theme.value = t }
+  function setPreferPersonalThemeInGroups(v: boolean) { preferPersonalThemeInGroups.value = v }
 
-  return { theme }
+  return { theme, setTheme, preferPersonalThemeInGroups, setPreferPersonalThemeInGroups }
 })

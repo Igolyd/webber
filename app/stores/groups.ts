@@ -41,6 +41,7 @@ export interface GroupProfileFields {
   groupTag?: string;
 }
 type ProfilesDict = Record<string, GroupProfileFields>;
+
 function getDefaultProfile(name = "Новая группа"): GroupProfileFields {
   return {
     name,
@@ -55,10 +56,12 @@ function getDefaultProfile(name = "Новая группа"): GroupProfileFields
     groupTag: "general",
   };
 }
+
 export const useGroupsStore = defineStore("groups", () => {
   const groups = useStorage<Group[]>("app.groups", []);
   const profilesDict = useStorage<ProfilesDict>("app.groupProfiles", {});
   const activeGroupId = useStorage<string | null>("app.activeGroupId", null);
+
   const availableGroupTags = reactive([
     { value: "general", label: "Общая" },
     { value: "study", label: "Учёба" },
@@ -66,6 +69,7 @@ export const useGroupsStore = defineStore("groups", () => {
     { value: "hobby", label: "Хобби" },
     { value: "family", label: "Семья" },
   ]);
+
   function ensureProfile(groupId: string) {
     if (!profilesDict.value[groupId]) {
       const group = groups.value.find((g) => g.id === groupId);
@@ -77,6 +81,7 @@ export const useGroupsStore = defineStore("groups", () => {
     }
     return profilesDict.value[groupId];
   }
+
   watchEffect(() => {
     if (!activeGroupId.value) {
       if (groups.value.length > 0) {
@@ -86,6 +91,7 @@ export const useGroupsStore = defineStore("groups", () => {
       ensureProfile(activeGroupId.value);
     }
   });
+
   function setActiveGroup(id: string | null) {
     if (id && groups.value.some((g) => g.id === id)) {
       activeGroupId.value = id;
@@ -94,6 +100,7 @@ export const useGroupsStore = defineStore("groups", () => {
       activeGroupId.value = null;
     }
   }
+
   function addGroup(payload: Omit<Group, "id" | "createdAt">) {
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
@@ -104,6 +111,7 @@ export const useGroupsStore = defineStore("groups", () => {
     activeGroupId.value = id;
     return newGroup;
   }
+
   function removeGroup(id: string) {
     groups.value = groups.value.filter((g) => g.id !== id);
     if (profilesDict.value[id]) {
@@ -116,13 +124,16 @@ export const useGroupsStore = defineStore("groups", () => {
       if (activeGroupId.value) ensureProfile(activeGroupId.value);
     }
   }
+
   function getById(id: string) {
     return groups.value.find((g) => g.id === id) || null;
   }
+
   const currentProfile = computed<GroupProfileFields | null>(() => {
     if (!activeGroupId.value) return null;
     return ensureProfile(activeGroupId.value);
   });
+
   const name = computed(() => currentProfile.value?.name ?? "");
   const pronouns = computed(() => currentProfile.value?.pronouns ?? "");
   const quote = computed(() => currentProfile.value?.quote ?? "");
@@ -133,6 +144,7 @@ export const useGroupsStore = defineStore("groups", () => {
   const decoration = computed(() => currentProfile.value?.decoration ?? null);
   const effects = computed(() => currentProfile.value?.effects ?? []);
   const groupTag = computed(() => currentProfile.value?.groupTag ?? "general");
+
   function updateMainProfile(payload: Partial<GroupProfileFields>) {
     if (!activeGroupId.value) return;
     const prof = ensureProfile(activeGroupId.value);
@@ -147,6 +159,7 @@ export const useGroupsStore = defineStore("groups", () => {
       groups.value = copy;
     }
   }
+
   async function saveAndReport(): Promise<{ ok: boolean; message: string }> {
     try {
       await new Promise((r) => setTimeout(r, 150));
@@ -155,6 +168,31 @@ export const useGroupsStore = defineStore("groups", () => {
       return { ok: false, message: "Не удалось сохранить профиль" };
     }
   }
+
+  // NEW: инициализация 2-х групп по умолчанию
+  function ensureSeed(): [Group, Group] {
+    if (groups.value.length >= 2) {
+      return [groups.value[0], groups.value[1]];
+    }
+    if (groups.value.length === 0) {
+      addGroup({
+        name: "Frontend Guild",
+        isPublic: true,
+        avatar: "/groups/frontend.png",
+        templateId: null,
+      });
+    }
+    if (groups.value.length === 1) {
+      addGroup({
+        name: "Backend Hub",
+        isPublic: true,
+        avatar: "/groups/backend.png",
+        templateId: null,
+      });
+    }
+    return [groups.value[0], groups.value[1]];
+  }
+
   return {
     groups,
     addGroup,
@@ -175,5 +213,7 @@ export const useGroupsStore = defineStore("groups", () => {
     availableGroupTags,
     updateMainProfile,
     saveAndReport,
+    // NEW:
+    ensureSeed,
   };
 });

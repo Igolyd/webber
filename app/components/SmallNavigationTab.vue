@@ -4,7 +4,7 @@
     rail
     permanent
     location="left"
-    class="groups-theme"
+    class="theme-drawer-left"
   >
     <v-container class="functional-panel">
       <v-btn icon @click="openPrivateMessage" :title="'ЛС'">
@@ -61,17 +61,11 @@ const openPrivateMessage = () => {
 </script>
 
 <style scoped>
-.groups-theme {
-  background-color: #2b2b2b;
-  color: white;
-  display: flex;
-  flex-direction: column;
+.theme-drawer-left {
+  background-color: transparent !important;
+  color: var(--app-text-color);
+  border-right: 1px solid var(--app-border-color);
+  box-shadow: none !important;
 }
-.functional-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding-top: 12px;
-}
+.functional-panel { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 12px; }
 </style>

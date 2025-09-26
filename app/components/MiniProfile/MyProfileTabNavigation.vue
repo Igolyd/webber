@@ -21,9 +21,16 @@
                 @keydown.enter.prevent="showFullProfile = true"
                 @keydown.space.prevent="showFullProfile = true"
               >
-                <v-avatar :size="avatarSize">
-                  <v-img :src="profiles.avatar || defaultAvatar" cover />
-                </v-avatar>
+                <div class="avatar-cell">
+                  <v-avatar :size="avatarSize" :rounded="99999">
+                    <v-img :src="profiles.avatar || defaultAvatar" cover />
+                  </v-avatar>
+                  <span
+                    class="mini-status-dot"
+                    :class="`st-${profiles.status || 'online'}`"
+                  ></span>
+                </div>
+
                 <div class="text-truncate" style="min-width: 0">
                   <div class="text-subtitle-2 font-weight-medium text-truncate">
                     {{ profiles.name || "Без имени" }}
@@ -313,6 +320,35 @@ export default defineComponent({
   cursor: pointer;
 }
 .my-profile-menu {
-  /* при необходимости донастройка меню профиля */
+}
+
+.avatar-cell {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+.mini-status-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #1f1f1f;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.st-online {
+  background: #3fb950;
+}
+.st-idle {
+  background: #f2c94c;
+}
+.st-dnd {
+  background: #f44336;
+}
+.st-invisible {
+  background: #9aa0a6;
 }
 </style>
