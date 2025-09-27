@@ -17,7 +17,7 @@ type Participant = {
   avatarUrl?: string;
 };
 
-const JANUS_SERVER = "wss://janus.conf.meetecho.com/ws";
+const JANUS_SERVER = "ws://31.129.110.23:8188/janus";
 const JANUS_ROOM = 1234;
 
 // Meta → display

@@ -7,8 +7,11 @@
     class="theme-drawer-left"
   >
     <v-container class="functional-panel">
-      <v-btn icon @click="openPrivateMessage" :title="'ЛС'">
-        <v-icon>mdi-message-text-outline</v-icon>
+      <v-btn
+        icon="mdi-message-text-outline"
+        @click="openPrivateMessage"
+        :title="'ЛС'"
+      >
       </v-btn>
       <v-btn icon @click="$emit('toggleChannels')" :title="'Каналы'">
         <v-icon>mdi-view-list</v-icon>
@@ -19,13 +22,13 @@
       <v-list-item
         v-for="group in groups"
         :key="group.id"
-        @click="$emit('updateSelectedGroup', group.id)"
         :active="group.id === selectedGroupId"
         rounded="lg"
+        @click="$emit('updateSelectedGroup', group.id)"
       >
         <template #prepend>
           <v-avatar size="40">
-            <v-img :src="group.imageSrc" />
+            <v-img :src="group.avatar" />
           </v-avatar>
         </template>
       </v-list-item>
@@ -34,30 +37,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from "vue";
 
 interface Group {
-  id: number
-  name: string
-  imageSrc: string
+  id: number;
+  name: string;
+  avatar: string;
 }
 
 const props = defineProps<{
-  groups: Group[]
-  selectedGroupId?: number
-}>()
+  groups: Group[];
+  selectedGroupId?: number;
+}>();
 
 const emit = defineEmits<{
-  (e: 'updateSelectedGroup', id: number): void
-  (e: 'toggleChannels'): void
-}>()
+  (e: "updateSelectedGroup", id: number): void;
+  (e: "toggleChannels"): void;
+}>();
 
-const drawer = ref(true)
+const drawer = ref(true);
 
 const openPrivateMessage = () => {
   // TODO: заменить на роутер
-  window.location.href = '/'
-}
+  window.location.href = "/";
+};
 </script>
 
 <style scoped>
@@ -67,5 +70,13 @@ const openPrivateMessage = () => {
   border-right: 1px solid var(--app-border-color);
   box-shadow: none !important;
 }
-.functional-panel { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 12px; }
+.functional-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  padding-right: 2px;
+  padding-left: 2px;
+}
 </style>
