@@ -1,4 +1,4 @@
-// stores/app/appearance.ts (фрагмент)
+// stores/app/appearance.ts
 import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 import { ref } from 'vue'

@@ -302,12 +302,15 @@
 
                 <div v-else-if="m.type === 'file'">
                   <div class="mb-2">
-                    <v-img
+                    <img
                       v-if="hasImage(getAttachment(m))"
                       :src="getAttachment(m)?.dataUrl"
                       :alt="getAttachment(m)?.name"
-                      :class="imageClassByMeta(getAttachment(m))"
-                      class="rounded clickable"
+                      :class="[
+                        'rounded',
+                        'clickable',
+                        imageClassByMeta(getAttachment(m)),
+                      ]"
                       @click="onImageOrStickerClick(m)"
                     />
                     <ClientOnly v-else-if="hasVideo(getAttachment(m))">
@@ -699,6 +702,10 @@ const channels = useChannelsStore();
 
 const meId = computed(() => account.userId || "");
 
+const isImage = hasImage as (att: CommonAttachment | null) => boolean;
+const isVideo = hasVideo as (att: CommonAttachment | null) => boolean;
+const isAudio = hasAudio as (att: CommonAttachment | null) => boolean;
+
 // Недавние эмодзи
 const recentEmojis = useStorage<string[]>("app.recentEmojis", []);
 
@@ -733,7 +740,7 @@ function openAlertDialog() {
 // Группировка по времени и отправителю (10 минут)
 const GROUP_INTERVAL_MS = 10 * 60 * 1000;
 function isGroupStart(idx: number) {
-  if ((idx = 0)) return true;
+  if (idx == 0) return true;
   const curr = items.value[idx];
   const prev = items.value[idx - 1];
   if (!curr || !prev) return true;
@@ -1035,8 +1042,7 @@ function gifSend(gif: Gif) {
   const url = pickGifUrl(gif);
   if (!url) return;
   const title = (gif as unknown as Record<string, unknown>)?.["title"];
-  const name =
-    typeof title === "string" && title ? `${title}.gif : "gif.gif"` : "gif.gif";
+  const name = typeof title === "string" && title ? `${title}.gif` : "gif.gif";
 
   const att = {
     id: crypto.randomUUID(),
@@ -1102,7 +1108,7 @@ function pushRecentEmoji(e: string) {
   if (!e) return;
   const arr = recentEmojis.value;
   const i = arr.indexOf(e);
-  if (i! - 1) arr.splice(i, 1);
+  if (i !== -1) arr.splice(i, 1); // было: if (i! - 1) ...
   arr.unshift(e);
   if (arr.length > 40) arr.length = 40;
 }
@@ -1504,10 +1510,11 @@ function onCopiedFromPreview() {
   background: var(--app-card-bg);
   border-top: 1px solid var(--app-border-color);
 }
-.image-viewer :deep(.v-overlaycontent) {
+/* Стало */
+.image-viewer :deep(.v-overlay__content) {
   padding: 0 !important;
 }
-.image-viewerwrap {
+.image-viewer__wrap {
   position: relative;
   width: 100vw;
   height: 100vh;
@@ -1516,7 +1523,7 @@ function onCopiedFromPreview() {
   align-items: center;
   justify-content: center;
 }
-.image-viewerimg {
+.image-viewer__img {
   max-width: 100vw;
   max-height: 100vh;
   object-fit: contain;
@@ -1524,7 +1531,7 @@ function onCopiedFromPreview() {
   user-select: none;
   pointer-events: auto;
 }
-.image-viewertopbar {
+.image-viewer__topbar {
   position: absolute;
   top: 8px;
   left: 10px;
