@@ -1,8 +1,6 @@
 <template>
   <div class="banner-wrap" :style="{ height: bannerHeight + 'px' }">
-    <!-- Бэкграунд баннера на всю ширину -->
     <div class="banner-box" :style="bannerBoxStyle"></div>
-    <!-- Оверлей для контраста текста/контента -->
     <div class="banner-overlay" :style="overlayStyle"></div>
 
     <!-- Центрируем круглую аватарку, полностью внутри баннера -->
@@ -10,26 +8,17 @@
       <v-avatar :size="size" class="avatar" :rounded="99999">
         <v-img :src="src || fallback" cover />
       </v-avatar>
-      <div
-        v-if="showStatus"
-        class="status-dot"
-        :class="`st-${status}`"
-      />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { computed } from 'vue'
-
 const props = defineProps<{
   src?: string
   fallback?: string
-  // Может быть: css цвет/градиент или URL/data/blob
   banner?: string
-  // Явно заданный цвет/градиент (если banner это картинка)
   bannerColor?: string
-  // Overlay
   overlayColor?: string
   overlayOpacity?: number
   size?: number
@@ -39,19 +28,17 @@ const props = defineProps<{
 }>()
 
 const size = computed(() => props.size ?? 96)
-// Высота баннера: увеличена, чтобы аватарка была полностью внутри
-const bannerHeight = computed(() => props.bannerHeightPx ?? (size.value + 64))
-const avatarBottom = 12 // отступ от нижней кромки баннера
+const bannerHeight = computed(() => props.bannerHeightPx ?? (size.value + 20))
+const avatarBottom = 12
 
 function isUrlLike(v: string) {
-  return /^(https?:|data:|blob:)/i.test(v) || /\.(png|jpe?g|gif|webp|svg)$/i.test(v)
+  return /^(https?:|data:|blob:)/i.test(v) || /.(png|jpe?g|gif|webp|svg)$/i.test(v)
 }
 
 const bannerBoxStyle = computed(() => {
   const raw = (props.banner || '').trim()
-  // Если передан URL — фоновая картинка
   if (raw && (raw.startsWith('url(') || isUrlLike(raw))) {
-    const url = raw.startsWith('url(') ? raw : `url("${raw}")`
+    const url = raw.startsWith('url(') ? raw : url("${raw}")
     return {
       backgroundImage: url,
       backgroundSize: 'cover',
@@ -59,7 +46,6 @@ const bannerBoxStyle = computed(() => {
       backgroundRepeat: 'no-repeat',
     } as Record<string, string>
   }
-  // Иначе — используем цвет/градиент
   const base = raw || props.bannerColor || 'linear-gradient(180deg, #8ec5e5, #4f9cf9)'
   return { background: base } as Record<string, string>
 })
@@ -71,62 +57,22 @@ const overlayStyle = computed(() => ({
 </script>
 
 <style scoped>
-.banner-wrap {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* Баннер занимает всю ширину родителя */
+.banner-wrap { position: relative; width: 100%; overflow: hidden; }
 .banner-box {
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 100%;
-  border-bottom-left-radius: 18px;
-  border-bottom-right-radius: 18px;
+  position: absolute; inset: 0 auto auto 0; width: 100%; height: 100%;
+  border-bottom-left-radius: 18px; border-bottom-right-radius: 18px;
   box-shadow: inset 0 4px 16px rgba(0,0,0,.18);
 }
-
-/* Полупрозрачный слой над баннером */
 .banner-overlay {
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 100%;
-  border-bottom-left-radius: 18px;
-  border-bottom-right-radius: 18px;
-  pointer-events: none;
+  position: absolute; inset: 0 auto auto 0; width: 100%; height: 100%;
+  border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; pointer-events: none;
 }
-
-/* Центрируем аватар по горизонтали и удерживаем внутри баннера */
-.avatar-holder {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-}
-.avatar {
-  position: relative;
-  z-index: 1;
-  background: #111;
-  box-shadow: 0 6px 20px rgba(0,0,0,.35);
-  border: 3px solid rgba(0,0,0,.2);
-}
-
-/* Точка статуса — снизу справа у аватарки, с плавной анимацией */
+.avatar-holder { position: absolute; left: 50%; transform: translateX(-50%); }
+.avatar { position: relative; z-index: 1; background: #111; box-shadow: 0 6px 20px rgba(0,0,0,.35); border: 3px solid rgba(0,0,0,.2); }
 .status-dot {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 16px;
-  height: 16px;
-  border: 3px solid #1f1f1f;
-  border-radius: 50%;
-  box-shadow: 0 0 0 2px rgba(0,0,0,.18);
+  position: absolute; right: -2px; bottom: -2px; width: 16px; height: 16px;
+  border: 3px solid #1f1f1f; border-radius: 50%; box-shadow: 0 0 0 2px rgba(0,0,0,.18);
   transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.st-online { background: #3fb950; }
-.st-idle { background: #f2c94c; }
-.st-dnd { background: #f44336; }
-.st-invisible { background: #9aa0a6; }
+.st-online { background: #3fb950; } .st-idle { background: #f2c94c; } .st-dnd { background: #f44336; } .st-invisible { background: #9aa0a6; }
 </style>

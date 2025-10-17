@@ -4,6 +4,7 @@ import { ref, reactive, computed, watch } from "vue";
 import { useAVStore } from "./app/av";
 import { useSettingsStore } from "./settings";
 import { useProfilesStore } from "./user/profiles";
+import { useChannelsStore } from "./channels";
 
 type Participant = {
   id: string;
@@ -18,7 +19,6 @@ type Participant = {
 };
 
 const JANUS_SERVER = "ws://31.129.110.23:8188/janus";
-const JANUS_ROOM = 1234;
 
 // Meta → display
 function encodeDisplay(name: string, avatarUrl?: string) {
@@ -42,34 +42,50 @@ export const useCallStore = defineStore("call", () => {
   const callEnabled = ref(false);
   const activeVoiceChannelId = ref<string | null>(null);
   const focusParticipantId = ref<string | null>(null);
+  const channelsStore = useChannelsStore();
 
   // Janus objects
   const janusClient = ref<any | null>(null);
   const janusSession = ref<any | null>(null);
   const janusRoom = ref<any | null>(null);
+  const janusPlugin = ref<any | null>(null);
   const publisher = ref<any | null>(null);
 
   // Local media
-  const localStream = ref<MediaStream | null>(import.meta.client ? new MediaStream() : null);
+  const localStream = ref<MediaStream | null>(
+    import.meta.client ? new MediaStream() : null
+  );
   const localVideoKind = ref<"none" | "camera" | "screenshare">("none");
 
-  // Devices
-  const selectedMicId = ref<string | null>(import.meta.client ? localStorage.getItem("microphoneDevice") : null);
-  const selectedCamId = ref<string | null>(import.meta.client ? localStorage.getItem("cameraDevice") : null);
-  const selectedOutputId = ref<string | null>(import.meta.client ? localStorage.getItem("audioOutputDevice") : null);
+  // Текущий трек шеринга, чтобы корректно стопать его
+  const currentScreenTrack = ref<MediaStreamTrack | null>(null);
 
-  // Screenshare constraints preset (пока не используем глубоко, но сохраняем на будущее)
-  const shareConstraints = ref<{ width?: number; height?: number; frameRate?: number } | null>(null);
+  // Devices
+  const selectedMicId = ref<string | null>(
+    import.meta.client ? localStorage.getItem("microphoneDevice") : null
+  );
+  const selectedCamId = ref<string | null>(
+    import.meta.client ? localStorage.getItem("cameraDevice") : null
+  );
+  const selectedOutputId = ref<string | null>(
+    import.meta.client ? localStorage.getItem("audioOutputDevice") : null
+  );
+
+  // Screenshare constraints preset
+  const shareConstraints = ref<{
+    width?: number;
+    height?: number;
+    frameRate?: number;
+  } | null>(null);
 
   // Participants and subscriptions
   const participants = reactive<Map<string, Participant>>(new Map());
   const subscriptions = new Map<string, any>();
-
-  // Для каждого подписчика храним набор подписанных mid
   const subMidsMap = new Map<string, Set<any>>();
-
-  // Состояние ensure/retry по подписчикам и таймеры гашения видео
-  const subState = new Map<string, { ensureTimer?: number; retryTimer?: number; retries: number }>();
+  const subState = new Map<
+    string,
+    { ensureTimer?: number; retryTimer?: number; retries: number }
+  >();
   const videoHideTimers = new Map<string, number>();
 
   function clearSubTimers(pid: string) {
@@ -93,11 +109,17 @@ export const useCallStore = defineStore("call", () => {
   // Audio analysers
   const analyserMap = new Map<
     string,
-    { ctx: AudioContext; analyser: AnalyserNode; src: MediaStreamAudioSourceNode }
+    {
+      ctx: AudioContext;
+      analyser: AnalyserNode;
+      src: MediaStreamAudioSourceNode;
+    }
   >();
-  let localAnalyser:
-    | { ctx: AudioContext; analyser: AnalyserNode; src: MediaStreamAudioSourceNode }
-    | null = null;
+  let localAnalyser: {
+    ctx: AudioContext;
+    analyser: AnalyserNode;
+    src: MediaStreamAudioSourceNode;
+  } | null = null;
   let speakingRaf = 0;
 
   const settings = useSettingsStore();
@@ -106,17 +128,35 @@ export const useCallStore = defineStore("call", () => {
 
   const participantList = computed(() => Array.from(participants.values()));
   const focusedParticipant = computed(() =>
-    focusParticipantId.value ? participants.get(focusParticipantId.value) || null : null
+    focusParticipantId.value
+      ? participants.get(focusParticipantId.value) || null
+      : null
   );
 
   function persistDevices() {
     if (!import.meta.client) return;
-    if (selectedMicId.value) localStorage.setItem("microphoneDevice", selectedMicId.value);
-    if (selectedCamId.value) localStorage.setItem("cameraDevice", selectedCamId.value);
-    if (selectedOutputId.value) localStorage.setItem("audioOutputDevice", selectedOutputId.value);
+    if (selectedMicId.value)
+      localStorage.setItem("microphoneDevice", selectedMicId.value);
+    if (selectedCamId.value)
+      localStorage.setItem("cameraDevice", selectedCamId.value);
+    if (selectedOutputId.value)
+      localStorage.setItem("audioOutputDevice", selectedOutputId.value);
   }
-
-  // Инициализация клиента: импортируем janus-simple-videoroom-client явно
+  // Проверяем, есть ли уже опубликованный sender указанного типа (видео/аудио)
+  function hasPublishedSender(kind: "audio" | "video"): boolean {
+    try {
+      const list = publisher.value?.pluginHandle?.getLocalTracks?.();
+      if (Array.isArray(list)) {
+        return !!list.find((t: any) => t?.type === kind);
+      }
+    } catch {}
+    // fallback: по локальному превью (оно проксирует onlocaltrack от плагина)
+    try {
+      return !!localStream.value?.getTracks().some((t) => t.kind === kind);
+    } catch {}
+    return false;
+  }
+  // Инициализация клиента/сессии
   let clientReady: Promise<any> | null = null;
   async function ensureJanus() {
     if (!import.meta.client) return;
@@ -128,9 +168,12 @@ export const useCallStore = defineStore("call", () => {
           debug: true,
           rtcConfig: {
             iceServers: [
-              { urls: ["stun:stun.l.google.com:19302", "stun:global.stun.twilio.com:3478"] },
-              // Добавьте свой TURN здесь для продакшена
-              // { urls: "turns:turn.example.com:5349", username: "", credential: "" }
+              {
+                urls: [
+                  "stun:stun.l.google.com:19302",
+                  "stun:global.stun.twilio.com:3478",
+                ],
+              },
             ],
             bundlePolicy: "max-bundle",
             rtcpMuxPolicy: "require",
@@ -142,81 +185,118 @@ export const useCallStore = defineStore("call", () => {
     if (!janusSession.value) {
       janusSession.value = await janusClient.value.createSession(JANUS_SERVER);
     }
-    if (!janusRoom.value) {
-      janusRoom.value = await janusSession.value.joinRoom(JANUS_ROOM);
+  }
 
-      // Доп. слушатель «сырых» событий комнаты: ловим обновления streams
-      attachRoomMessageListener(janusRoom.value);
+  async function ensureVideoRoomPlugin() {
+    await ensureJanus();
+    if (janusPlugin.value) return janusPlugin.value;
+    janusPlugin.value = await janusSession.value.attachToPlugin(
+      "janus.plugin.videoroom"
+    );
+    return janusPlugin.value;
+  }
+
+  async function createJanusRoom(params?: {
+    description?: string;
+    pin?: string;
+    permanent?: boolean;
+    is_private?: boolean;
+  }): Promise<number> {
+    const plugin = await ensureVideoRoomPlugin();
+    const req: any = {
+      request: "create",
+      permanent: params?.permanent ?? false,
+      is_private: false,
+    };
+    if (params?.description) req.description = params.description;
+    if (params?.pin) req.pin = params.pin;
+
+    const res = await plugin.sendRequest(req);
+    if (res?.videoroom === "created" && typeof res?.room === "number") {
+      return res.room as number;
     }
+    throw new Error("Janus room create failed: " + JSON.stringify(res));
+  }
+
+  async function destroyJanusRoom(
+    roomId: number,
+    permanent = false
+  ): Promise<void> {
+    const plugin = await ensureVideoRoomPlugin();
+    const req: any = {
+      request: "destroy",
+      room: roomId,
+      permanent,
+    };
+    const res = await plugin.sendRequest(req);
+    if (res?.videoroom === "destroyed") return;
   }
 
   function attachRoomMessageListener(room: any) {
-    // События видеокомнаты от плагина
-    room.pluginHandle?.eventTarget?.addEventListener("message", (ev: CustomEvent) => {
-      const msg = ev.detail?.message;
-      if (!msg || msg.videoroom !== "event") return;
+    room.pluginHandle?.eventTarget?.addEventListener(
+      "message",
+      (ev: CustomEvent) => {
+        const msg = ev.detail?.message;
+        if (!msg || msg.videoroom !== "event") return;
 
-      if (Array.isArray(msg.streams)) {
-        // Группируем по feed
-        const grouped = new Map<number, any[]>();
-        for (const s of msg.streams) {
-          const feed = Number(s.feed);
-          if (!grouped.has(feed)) grouped.set(feed, []);
-          grouped.get(feed)!.push(s);
-        }
-
-        grouped.forEach(async (items, feed) => {
-          const pid = String(feed);
-          const sub = subscriptions.get(pid);
-          if (!sub) return;
-
-          const known = subMidsMap.get(pid) || new Set<any>();
-          // Стремимся быстрее добрать видео mID
-          const toAdd = items
-            .filter(
-              (s) =>
-                s.mid != null &&
-                (s.type === "video" || s.mtype === "video") &&
-                !known.has(s.mid)
-            )
-            .map((s) => ({ feed, mid: s.mid }));
-
-          if (toAdd.length) {
-            try {
-              await sub.addStreams(toAdd);
-            } catch (e) {
-              console.warn("message.streams addStreams error", e);
-            }
+        if (Array.isArray(msg.streams)) {
+          const grouped = new Map<number, any[]>();
+          for (const s of msg.streams) {
+            const feed = Number(s.feed);
+            if (!grouped.has(feed)) grouped.set(feed, []);
+            grouped.get(feed)!.push(s);
           }
 
-          // Обычная синхронизация (поддержка removed/disabled и т.п.)
-          const toRemove: any[] = [];
-          items.forEach((s) => {
-            const mid = s.mid;
-            const removed =
-              s.removed === true ||
-              s.send === false ||
-              s.active === false ||
-              s.disabled === true;
-            if (removed && mid != null && known.has(mid)) {
-              toRemove.push({ feed, mid });
+          grouped.forEach(async (items, feed) => {
+            const pid = String(feed);
+            const sub = subscriptions.get(pid);
+            if (!sub) return;
+
+            const known = subMidsMap.get(pid) || new Set<any>();
+            const toAdd = items
+              .filter(
+                (s) =>
+                  s.mid != null &&
+                  (s.type === "video" || s.mtype === "video") &&
+                  !known.has(s.mid)
+              )
+              .map((s) => ({ feed, mid: s.mid }));
+
+            if (toAdd.length) {
+              try {
+                await sub.addStreams(toAdd);
+              } catch (e) {
+                console.warn("message.streams addStreams error", e);
+              }
+            }
+
+            const toRemove: any[] = [];
+            items.forEach((s) => {
+              const mid = s.mid;
+              const removed =
+                s.removed === true ||
+                s.send === false ||
+                s.active === false ||
+                s.disabled === true;
+              if (removed && mid != null && known.has(mid)) {
+                toRemove.push({ feed, mid });
+              }
+            });
+            try {
+              if (toRemove.length) await sub.removeStreams(toRemove);
+            } catch (e) {
+              console.warn("message.streams removeStreams error", e);
+            }
+
+            const p = participants.get(pid);
+            if (p) {
+              const pubShim = { id: feed, streams: items };
+              scheduleEnsureCycle(pid, pubShim);
             }
           });
-          try {
-            if (toRemove.length) await sub.removeStreams(toRemove);
-          } catch (e) {
-            console.warn("message.streams removeStreams error", e);
-          }
-
-          // Страховка: запустим ensure-цикл с известным набором streams
-          const p = participants.get(pid);
-          if (p) {
-            const pubShim = { id: feed, streams: items };
-            scheduleEnsureCycle(pid, pubShim);
-          }
-        });
+        }
       }
-    });
+    );
   }
 
   function clearAnalysers() {
@@ -254,7 +334,11 @@ export const useCallStore = defineStore("call", () => {
     speakingRaf = requestAnimationFrame(loop);
   }
 
-  function attachAnalyserForStream(publisherId: string, stream: MediaStream, isLocal = false) {
+  function attachAnalyserForStream(
+    publisherId: string,
+    stream: MediaStream,
+    isLocal = false
+  ) {
     if (!import.meta.client) return;
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) return;
@@ -276,6 +360,28 @@ export const useCallStore = defineStore("call", () => {
     if (callEnabled.value && activeVoiceChannelId.value === channelId) return;
 
     await ensureJanus();
+
+    const ch = channelsStore.getById(channelId);
+    if (!ch) return;
+
+    let roomId = ch.janusRoomId ?? null;
+    if (ch.type !== "voice") {
+      console.warn("joinVoiceChannel: not a voice channel");
+      return;
+    }
+    if (!roomId) {
+      try {
+        roomId = await createJanusRoom({
+          description: `${ch.name} (${ch.groupId})`,
+          is_private: false,
+        });
+        channelsStore.updateChannel(ch.id, { janusRoomId: roomId });
+      } catch (e) {
+        console.error("Failed to create Janus room", e);
+        return;
+      }
+    }
+
     if (callEnabled.value) await leaveCall(false);
 
     clearAnalysers();
@@ -286,7 +392,8 @@ export const useCallStore = defineStore("call", () => {
 
     localVideoKind.value = settings.videoEnabled ? "camera" : "none";
 
-    const profileName = displayName?.trim() || profiles.name?.trim() || "Без имени";
+    const profileName =
+      displayName?.trim() || profiles.name?.trim() || "Без имени";
     const profileAvatar = profiles.avatar || "";
 
     participants.set("local", {
@@ -301,7 +408,9 @@ export const useCallStore = defineStore("call", () => {
       avatarUrl: profileAvatar || undefined,
     });
 
-    // Список паблишеров
+    janusRoom.value = await janusSession.value.joinRoom(roomId);
+    attachRoomMessageListener(janusRoom.value);
+    setupVisibilityAwakening(); // <- добавили
     janusRoom.value.onPublisherAdded((pubs: any[]) => pubs.forEach(subscribe));
     janusRoom.value.onPublisherRemoved(unsubscribe);
     if (typeof janusRoom.value.onPublisherList === "function") {
@@ -315,7 +424,6 @@ export const useCallStore = defineStore("call", () => {
     settings.toggleCall(true);
   }
 
-  // Вспомогательные функции для ускорения/страховки подписки
   async function ensureMissingMids(pid: string, pub: any) {
     const sub = subscriptions.get(pid);
     if (!sub) return;
@@ -323,7 +431,9 @@ export const useCallStore = defineStore("call", () => {
     const known = subMidsMap.get(pid) || new Set<any>();
     const streamList: any[] = Array.isArray(pub.streams) ? pub.streams : [];
     const videoMids = streamList
-      .filter((s) => s.mid != null && (s.type === "video" || s.mtype === "video"))
+      .filter(
+        (s) => s.mid != null && (s.type === "video" || s.mtype === "video")
+      )
       .map((s) => s.mid);
 
     const toAdd = videoMids
@@ -364,41 +474,64 @@ export const useCallStore = defineStore("call", () => {
   }
 
   function scheduleEnsureCycle(pid: string, pub: any) {
-    // Если уже есть видео — не дёргаем
     if (hasRemoteVideo(pid)) {
       clearSubTimers(pid);
       subState.set(pid, { retries: 0 });
       return;
     }
 
-    const st = subState.get(pid) || { retries: 0 };
-    // Шаг 1: быстрый ensure после подписки (или обновления)
-    st.ensureTimer = setTimeout(async () => {
+    // Очищаем все прежние таймеры и выполняем ensure сразу в microtask
+    clearSubTimers(pid);
+    queueMicrotask(async () => {
       await ensureMissingMids(pid, pub);
 
-      // Если всё ещё нет видео, планируем мягкий retry (resubscribe)
       if (!hasRemoteVideo(pid)) {
-        st.retryTimer = setTimeout(async () => {
-          const tries = (st.retries || 0) + 1;
-          if (tries <= 2 && !hasRemoteVideo(pid)) {
-            subState.set(pid, { retries: tries });
-            await forceResubscribe(pid, pub);
-          }
-        }, 2000); // 2s после ensure
+        // Увеличим счётчик и попробуем принудительный resubscribe
+        const tries = (subState.get(pid)?.retries || 0) + 1;
+        subState.set(pid, { retries: tries });
+        try {
+          await forceResubscribe(pid, pub);
+        } catch (e) {
+          console.warn("ensure fallback resubscribe failed", e);
+        }
       }
-    }, 700); // 700ms после начальной подписки/ивента
-
-    subState.set(pid, st);
+    });
   }
+  // Пробуждение в активной вкладке: как только вкладка стала видимой — сразу
+  // ресюмим AudioContext и принудительно проверяем подписки без ожидания таймеров.
+  let visibilityListenerAttached = false;
+  function setupVisibilityAwakening() {
+    if (visibilityListenerAttached || !import.meta.client) return;
+    visibilityListenerAttached = true;
 
-  function attachSubHandlers(pid: string, sub: any, p: Participant, stream: MediaStream) {
+    document.addEventListener("visibilitychange", async () => {
+      if (!document.hidden) {
+        try {
+          await resumeAnalysers();
+        } catch {}
+        // Для всех удалённых участников, где видео не подтянулось — forceResubscribe
+        for (const pid of participants.keys()) {
+          if (pid === "local") continue;
+          if (!hasRemoteVideo(pid)) {
+            try {
+              await forceResubscribe(pid, { id: Number(pid) });
+            } catch {}
+          }
+        }
+      }
+    });
+  }
+  function attachSubHandlers(
+    pid: string,
+    sub: any,
+    p: Participant,
+    stream: MediaStream
+  ) {
     sub.onTrackAdded((track: MediaStreamTrack, mid: any) => {
-      // Любой новый трек → сброс таймеров (видео появится — избавимся от ретраев)
       clearSubTimers(pid);
 
       if (track.kind === "video") {
         stream.addTrack(track);
-        // Оставляем только последний видео-трек — чтобы не мигало
         stream.getVideoTracks().forEach((t) => {
           if (t !== track) stream.removeTrack(t);
         });
@@ -423,8 +556,6 @@ export const useCallStore = defineStore("call", () => {
       }
 
       if (track.kind === "video") {
-        // Гистерезис: не гасим «видео» мгновенно, ждём 400мс —
-        // часто Janus даёт mute/remove/unmute при рестарте
         const oldTimer = videoHideTimers.get(pid);
         if (oldTimer) clearTimeout(oldTimer);
         const tm = setTimeout(() => {
@@ -438,14 +569,14 @@ export const useCallStore = defineStore("call", () => {
     });
   }
 
-  // Подписка/досабскрайб на обновления streams
   async function subscribe(pub: any) {
     if (!import.meta.client || !janusRoom.value) return;
 
     const pid = String(pub.id);
-    const incomingMids = new Set<any>((pub.streams || []).map((s: any) => s.mid).filter((m: any) => m != null));
+    const incomingMids = new Set<any>(
+      (pub.streams || []).map((s: any) => s.mid).filter((m: any) => m != null)
+    );
 
-    // Уже подписаны → синхронизируем mid'ы (add/remove) и планируем ensure
     if (subscriptions.has(pid)) {
       const sub = subscriptions.get(pid);
       const known = subMidsMap.get(pid) || new Set<any>();
@@ -471,7 +602,6 @@ export const useCallStore = defineStore("call", () => {
       return;
     }
 
-    // Первая подписка: подписываемся на весь feed
     const sub = await janusRoom.value.subscribe([{ feed: pub.id }]);
     subscriptions.set(pid, sub);
     subMidsMap.set(pid, new Set<any>());
@@ -492,8 +622,6 @@ export const useCallStore = defineStore("call", () => {
     participants.set(p.id, p);
 
     attachSubHandlers(pid, sub, p, stream);
-
-    // Планируем ensure/возможный точечный resubscribe, если видео не придёт
     scheduleEnsureCycle(pid, pub);
   }
 
@@ -508,7 +636,6 @@ export const useCallStore = defineStore("call", () => {
     } catch {}
     subMidsMap.delete(pid);
 
-    // Чистим таймеры
     clearSubTimers(pid);
     const vtm = videoHideTimers.get(pid);
     if (vtm) clearTimeout(vtm);
@@ -545,6 +672,12 @@ export const useCallStore = defineStore("call", () => {
     participants.clear();
 
     clearAnalysers();
+
+    // ВАЖНО: если шли трансляцию — остановим трек шеринга
+    try {
+      currentScreenTrack.value?.stop();
+    } catch {}
+    currentScreenTrack.value = null;
 
     localStream.value?.getTracks().forEach((t) => t.stop());
     localStream.value = import.meta.client ? new MediaStream() : null;
@@ -602,6 +735,26 @@ export const useCallStore = defineStore("call", () => {
     const me = participants.get("local");
     if (me) me.hasVideo = !!on;
   }
+  async function requestScreenTrack() {
+    const sc = shareConstraints.value || {};
+    // Важно: getDisplayMedia требует пользовательского жеста и https/localhost
+    const disp = await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        frameRate: sc.frameRate ?? 30,
+        width: sc.width,
+        height: sc.height,
+        cursor: "always",
+      },
+      audio: false,
+    });
+    const track = disp.getVideoTracks()[0];
+    if (!track) throw new Error("No video track from getDisplayMedia");
+    // Авто-выключение при остановке пользователем
+    track.addEventListener("ended", () => {
+      toggleScreenshare(false);
+    });
+    return track;
+  }
 
   async function toggleScreenshare(
     on: boolean,
@@ -610,11 +763,25 @@ export const useCallStore = defineStore("call", () => {
     if (!callEnabled.value) return;
 
     if (on) {
-      localVideoKind.value = "screenshare";
       shareConstraints.value = opts || null;
+      try {
+        const track = await requestScreenTrack(); // ОТКРЫВАЕМ ОКНО ВЫБОРА
+        currentScreenTrack.value = track;
+        localVideoKind.value = "screenshare";
+      } catch (e: any) {
+        // Пользователь мог нажать «Отмена»
+        console.warn("Screenshare denied/cancelled", e?.name || e);
+        shareConstraints.value = null;
+        localVideoKind.value = settings.videoEnabled ? "camera" : "none";
+        return;
+      }
     } else {
-      localVideoKind.value = settings.videoEnabled ? "camera" : "none";
+      try {
+        currentScreenTrack.value?.stop();
+      } catch {}
+      currentScreenTrack.value = null;
       shareConstraints.value = null;
+      localVideoKind.value = settings.videoEnabled ? "camera" : "none";
     }
 
     await publishWithCurrentSettings();
@@ -630,7 +797,7 @@ export const useCallStore = defineStore("call", () => {
     selectedMicId.value = id;
     persistDevices();
     if (callEnabled.value) {
-      publishWithCurrentSettings(); // renegotiation
+      publishWithCurrentSettings();
     }
   }
 
@@ -647,37 +814,57 @@ export const useCallStore = defineStore("call", () => {
     persistDevices();
   }
 
-  // Сборка треков для текущих настроек (tracks API)
+  // Строим аудио/видео треки для публикации
   function buildTracksForCurrent(): any[] {
     const tracks: any[] = [];
 
-    // AUDIO
+    const hasAudioSender = hasPublishedSender("audio");
+    const hasVideoSender = hasPublishedSender("video");
+
+    // AUDIO (микрофон)
     if (settings.microphoneEnabled) {
-      tracks.push({
+      const t: any = {
         type: "audio",
-        capture: selectedMicId.value ? { deviceId: { exact: selectedMicId.value } } : true,
-      });
+        capture: selectedMicId.value
+          ? { deviceId: { exact: selectedMicId.value } }
+          : true,
+      };
+      if (hasAudioSender) t.replace = true;
+      tracks.push(t);
+    } else if (hasAudioSender) {
+      // Микрофон выключен → удаляем существующий sender
+      tracks.push({ type: "audio", remove: true });
     }
 
     // VIDEO
-    if (localVideoKind.value === "camera" && settings.videoEnabled) {
-      tracks.push({
+    if (localVideoKind.value == "screenshare") {
+      if (currentScreenTrack.value) {
+        const t: any = {
+          type: "video",
+          // Важно: для шеринга передаём сам MediaStreamTrack через capture
+          capture: currentScreenTrack.value as MediaStreamTrack,
+        };
+        if (hasVideoSender) t.replace = true; // заменить камеру/старый трек на экран
+        tracks.push(t);
+      } else if (hasVideoSender) {
+        // режим шеринга включен, но трека нет → удалим существующее видео
+        tracks.push({ type: "video", remove: true });
+      }
+    } else if (localVideoKind.value == "camera" && settings.videoEnabled) {
+      const t: any = {
         type: "video",
-        capture: selectedCamId.value ? { deviceId: { exact: selectedCamId.value } } : true,
-      });
-    } else if (localVideoKind.value === "screenshare") {
-      tracks.push({
-        type: "video",
-        capture: "screen", // надёжнее флаг строки для screen
-      });
-      // Если нужно строго задавать fps/размер — потребуется расширение в клиенте / кастомная реализация
+        capture: selectedCamId.value
+          ? { deviceId: { exact: selectedCamId.value } }
+          : true,
+      };
+      if (hasVideoSender) t.replace = true;
+      tracks.push(t);
+    } else if (hasVideoSender) {
+      // видео выключено → удаляем существующий video sender
+      tracks.push({ type: "video", remove: true });
     }
 
     return tracks;
-  }
-
-  function buildInitialMediaOptions(): { tracks: any[] } {
-    return { tracks: buildTracksForCurrent() };
   }
 
   async function publishWithCurrentSettings() {
@@ -687,20 +874,16 @@ export const useCallStore = defineStore("call", () => {
     );
 
     const tracks = buildTracksForCurrent();
-    const wantAnyMedia = tracks.length > 0;
+    const wantAnyAdd = tracks.some((t) => !t.remove);
 
-    // Первый publish
+    // Нет паблишера
     if (!publisher.value) {
-      if (!wantAnyMedia) {
-        return; // заходим без исходящих медиа
-      }
-
+      if (!wantAnyAdd) return; // нечего публиковать
       publisher.value = await janusRoom.value.publish({
         publishOptions: { display: displayPayload },
         mediaOptions: { tracks },
       });
 
-      // Локальные треки: добавляем новый трек и только потом очищаем старые, чтобы не мигало
       publisher.value.onTrackAdded((track: MediaStreamTrack) => {
         if (!localStream.value) localStream.value = new MediaStream();
 
@@ -709,7 +892,11 @@ export const useCallStore = defineStore("call", () => {
           localStream.value.getVideoTracks().forEach((t) => {
             if (t !== track) localStream.value!.removeTrack(t);
           });
-        } else {
+          // помечаем экранный трек, если сейчас режим шеринга
+          if (localVideoKind.value === "screenshare") {
+            currentScreenTrack.value = track;
+          }
+        } else if (track.kind === "audio") {
           localStream.value.addTrack(track);
         }
 
@@ -729,21 +916,29 @@ export const useCallStore = defineStore("call", () => {
       publisher.value.onTrackRemoved((track: MediaStreamTrack) => {
         if (!localStream.value) return;
         localStream.value.removeTrack(track);
+
+        if (track === currentScreenTrack.value) {
+          try {
+            track.stop();
+          } catch {}
+          currentScreenTrack.value = null;
+        }
+
         const me = participants.get("local");
         if (me) {
-          if (track.kind === "video") me.hasVideo = localStream.value.getVideoTracks().length > 0;
-          if (track.kind === "audio") me.hasAudio = localStream.value.getAudioTracks().length > 0;
+          if (track.kind === "video")
+            me.hasVideo = localStream.value.getVideoTracks().length > 0;
+          if (track.kind === "audio")
+            me.hasAudio = localStream.value.getAudioTracks().length > 0;
         }
       });
 
       return;
     }
-
-    // Мягкий перезапуск: передаём актуальный набор tracks
+    // Есть паблишер → рестарт/замена треков
     await publisher.value.restart({ tracks }, { display: displayPayload });
   }
 
-  // Обновлять локальную карточку при изменении профиля
   watch(
     () => [profiles.name, profiles.avatar] as const,
     ([nm, av]) => {
@@ -783,5 +978,8 @@ export const useCallStore = defineStore("call", () => {
     setFocusParticipant,
 
     resumeAnalysers,
+
+    createJanusRoom,
+    destroyJanusRoom,
   };
 });

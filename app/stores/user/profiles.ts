@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 
 export type Badge = { id: string; name: string; icon?: string; color?: string };
+
 export type ProfileEffect = { id: string; name: string };
 export type Decoration = { id: string; name: string };
 export type PresenceStatus = "online" | "idle" | "dnd" | "invisible";
@@ -10,7 +11,7 @@ type ProfilesState = {
   name: string;
   pronouns: string;
   avatar: string;
-  banner: string;                // может быть цвет/градиент/URL
+  banner: string; // может быть цвет/градиент/URL
   badge: Badge | null;
   decoration: Decoration | null;
   effects: ProfileEffect[];
@@ -19,13 +20,14 @@ type ProfilesState = {
   groupTag: string;
   availableGroupTags: string[];
   groupPersonalProfile: Record<string, unknown>;
-  status: PresenceStatus;        // NEW: статус присутствия
-  bannerColor: string;           // NEW: кастомный цвет/градиент для баннера
-  bannerOverlayColor: string;    // NEW: цвет оверлея
-  bannerOverlayOpacity: number;  // NEW: от 0 до 1
+  status: PresenceStatus; // NEW: статус присутствия
+  bannerColor: string; // NEW: кастомный цвет/градиент для баннера
+  bannerOverlayColor: string; // NEW: цвет оверлея
+  bannerOverlayOpacity: number; // NEW: от 0 до 1
 };
 
 const LS_KEY = "app:user:profiles";
+const LS_ID_KEY = "app:user:profileId";
 
 function loadFromLS(): Partial<ProfilesState> | null {
   try {
@@ -47,41 +49,90 @@ export const useProfilesStore = defineStore("profiles", () => {
   const about = ref<string>("");
   const quote = ref<string>("");
   const groupTag = ref<string>("");
-  const availableGroupTags = ref<string[]>(["Геймеры", "Музыканты", "Дизайнеры"]);
+  const availableGroupTags = ref<string[]>([
+    "Геймеры",
+    "Музыканты",
+    "Дизайнеры",
+  ]);
   const groupPersonalProfile = ref<Record<string, unknown>>({});
 
-  const status = ref<PresenceStatus>("online");     // NEW
+  const status = ref<PresenceStatus>("online"); // NEW
   const bannerColor = ref<string>("linear-gradient(180deg, #8ec5e5, #4f9cf9)"); // NEW
   const bannerOverlayColor = ref<string>("#000000"); // NEW
-  const bannerOverlayOpacity = ref<number>(0.25);    // NEW
-
-  const initial = loadFromLS();
-  if (initial) {
-    if (initial.name !== undefined) name.value = initial.name;
-    if (initial.pronouns !== undefined) pronouns.value = initial.pronouns;
-    if (initial.avatar !== undefined) avatar.value = initial.avatar;
-    if (initial.banner !== undefined) banner.value = initial.banner;
-    if (initial.badge !== undefined) badge.value = initial.badge as any;
-    if (initial.decoration !== undefined) decoration.value = initial.decoration as any;
-    if (initial.effects !== undefined) effects.value = initial.effects as any;
-    if (initial.about !== undefined) about.value = initial.about;
-    if (initial.quote !== undefined) quote.value = initial.quote;
-    if (initial.groupTag !== undefined) groupTag.value = initial.groupTag;
-    if (initial.groupPersonalProfile !== undefined)
-      groupPersonalProfile.value = initial.groupPersonalProfile as any;
-    if (initial.availableGroupTags !== undefined && Array.isArray(initial.availableGroupTags)) {
-      availableGroupTags.value = initial.availableGroupTags;
+  const bannerOverlayOpacity = ref<number>(0.25); // NEW
+  function applySnapshot(s: Partial<ProfilesState>) {
+    if (s.name !== undefined) name.value = s.name;
+    if (s.pronouns !== undefined) pronouns.value = s.pronouns;
+    if (s.avatar !== undefined) avatar.value = s.avatar;
+    if (s.banner !== undefined) banner.value = s.banner;
+    if (s.badge !== undefined) badge.value = s.badge as any;
+    if (s.decoration !== undefined) decoration.value = s.decoration as any;
+    if (s.effects !== undefined) effects.value = s.effects as any;
+    if (s.about !== undefined) about.value = s.about;
+    if (s.quote !== undefined) quote.value = s.quote;
+    if (s.groupTag !== undefined) groupTag.value = s.groupTag;
+    if (s.groupPersonalProfile !== undefined)
+      groupPersonalProfile.value = s.groupPersonalProfile as any;
+    if (
+      s.availableGroupTags !== undefined &&
+      Array.isArray(s.availableGroupTags)
+    ) {
+      availableGroupTags.value = s.availableGroupTags;
     }
-    if (initial.status !== undefined) status.value = initial.status as PresenceStatus;
-    if (initial.bannerColor !== undefined) bannerColor.value = initial.bannerColor;
-    if (initial.bannerOverlayColor !== undefined) bannerOverlayColor.value = initial.bannerOverlayColor;
-    if (initial.bannerOverlayOpacity !== undefined) bannerOverlayOpacity.value = initial.bannerOverlayOpacity;
+    if (s.status !== undefined) status.value = s.status as PresenceStatus;
+    if (s.bannerColor !== undefined) bannerColor.value = s.bannerColor;
+    if (s.bannerOverlayColor !== undefined)
+      bannerOverlayColor.value = s.bannerOverlayColor;
+    if (s.bannerOverlayOpacity !== undefined)
+      bannerOverlayOpacity.value = s.bannerOverlayOpacity;
     // Мягкая миграция: если не задан bannerColor, а banner — это не URL, считаем его цветом/градиентом
-    if (!initial.bannerColor && initial.banner && !/^(https?:|data:|blob:)/i.test(initial.banner)) {
-      bannerColor.value = initial.banner;
+    if (
+      !s.bannerColor &&
+      s.banner &&
+      !/^(https?:|data:|blob:)/i.test(s.banner)
+    ) {
+      bannerColor.value = s.banner;
     }
   }
-
+  const initial = loadFromLS();
+  if (initial) applySnapshot(initial);
+  // if (initial) {
+  //   if (initial.name !== undefined) name.value = initial.name;
+  //   if (initial.pronouns !== undefined) pronouns.value = initial.pronouns;
+  //   if (initial.avatar !== undefined) avatar.value = initial.avatar;
+  //   if (initial.banner !== undefined) banner.value = initial.banner;
+  //   if (initial.badge !== undefined) badge.value = initial.badge as any;
+  //   if (initial.decoration !== undefined) decoration.value = initial.decoration as any;
+  //   if (initial.effects !== undefined) effects.value = initial.effects as any;
+  //   if (initial.about !== undefined) about.value = initial.about;
+  //   if (initial.quote !== undefined) quote.value = initial.quote;
+  //   if (initial.groupTag !== undefined) groupTag.value = initial.groupTag;
+  //   if (initial.groupPersonalProfile !== undefined)
+  //     groupPersonalProfile.value = initial.groupPersonalProfile as any;
+  //   if (initial.availableGroupTags !== undefined && Array.isArray(initial.availableGroupTags)) {
+  //     availableGroupTags.value = initial.availableGroupTags;
+  //   }
+  //   if (initial.status !== undefined) status.value = initial.status as PresenceStatus;
+  //   if (initial.bannerColor !== undefined) bannerColor.value = initial.bannerColor;
+  //   if (initial.bannerOverlayColor !== undefined) bannerOverlayColor.value = initial.bannerOverlayColor;
+  //   if (initial.bannerOverlayOpacity !== undefined) bannerOverlayOpacity.value = initial.bannerOverlayOpacity;
+  //   // Мягкая миграция: если не задан bannerColor, а banner — это не URL, считаем его цветом/градиентом
+  //   if (!initial.bannerColor && initial.banner && !/^(https?:|data:|blob:)/i.test(initial.banner)) {
+  //     bannerColor.value = initial.banner;
+  //   }
+  // }
+  function ensureLocalProfileId(): string {
+    try {
+      const saved = localStorage.getItem(LS_ID_KEY);
+      if (saved && saved.length > 0) return saved;
+    } catch {}
+    const id = `profile-${crypto.randomUUID()}`;
+    try {
+      localStorage.setItem(LS_ID_KEY, id);
+    } catch {}
+    return id;
+  }
+  const profileId = ref<string>(ensureLocalProfileId());
   function getSnapshot(): ProfilesState {
     return {
       name: name.value,
@@ -125,20 +176,7 @@ export const useProfilesStore = defineStore("profiles", () => {
       bannerOverlayOpacity: number;
     }>
   ) {
-    if (payload.name !== undefined) name.value = payload.name;
-    if (payload.pronouns !== undefined) pronouns.value = payload.pronouns;
-    if (payload.avatar !== undefined) avatar.value = payload.avatar;
-    if (payload.banner !== undefined) banner.value = payload.banner;
-    if (payload.badge !== undefined) badge.value = payload.badge;
-    if (payload.decoration !== undefined) decoration.value = payload.decoration;
-    if (payload.effects !== undefined) effects.value = payload.effects;
-    if (payload.about !== undefined) about.value = payload.about;
-    if (payload.quote !== undefined) quote.value = payload.quote;
-    if (payload.groupTag !== undefined) groupTag.value = payload.groupTag;
-    if (payload.status !== undefined) status.value = payload.status;
-    if (payload.bannerColor !== undefined) bannerColor.value = payload.bannerColor;
-    if (payload.bannerOverlayColor !== undefined) bannerOverlayColor.value = payload.bannerOverlayColor;
-    if (payload.bannerOverlayOpacity !== undefined) bannerOverlayOpacity.value = payload.bannerOverlayOpacity;
+    applySnapshot(payload);
   }
 
   function updateStatus(next: PresenceStatus) {
@@ -166,7 +204,11 @@ export const useProfilesStore = defineStore("profiles", () => {
       };
     }
   }
-
+  function resetFromStorage() {
+    const s = loadFromLS();
+    if (s) applySnapshot(s);
+    return !!s;
+  }
   watch(
     [
       name,
@@ -213,5 +255,8 @@ export const useProfilesStore = defineStore("profiles", () => {
     updateMainProfile,
     updateStatus,
     saveAndReport,
+    resetFromStorage, // NEW
+    profileId,
+    getSnapshot, // опционально полезно
   };
 });

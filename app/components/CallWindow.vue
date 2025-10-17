@@ -91,24 +91,53 @@
       </v-card-title>
 
       <v-card-text>
-        <div v-if="focused" class="mb-3">
-          <UserTile :participant="focused" big />
-        </div>
-        <div class="tiles-grid">
-          <UserTile
-            v-for="p in others"
-            :key="p.id"
-            :participant="p"
-            @click="call.setFocusParticipant(p.id)"
-          />
-        </div>
+        <template v-if="focused">
+          <div class="stage mb-3">
+            <UserTile :participant="focused" big />
+            <v-btn
+              class="exit-focus-btn"
+              variant="tonal"
+              color="primary"
+              prepend-icon="mdi-fullscreen-exit"
+              @click="call.setFocusParticipant(null)"
+            >
+              Выйти из фокусировки
+            </v-btn>
+          </div>
+          <div class="thumbs-row">
+            <UserTile
+              v-for="p in others"
+              :key="p.id"
+              :participant="p"
+              @click="call.setFocusParticipant(p.id)"
+            />
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="tiles-grid">
+            <UserTile
+              v-for="p in others"
+              :key="p.id"
+              :participant="p"
+              @click="call.setFocusParticipant(p.id)"
+            />
+          </div>
+        </template>
       </v-card-text>
     </v-card>
   </v-dialog>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, onMounted } from "vue";
+import {
+  defineComponent,
+  computed,
+  ref,
+  onMounted,
+  watch,
+  nextTick,
+} from "vue";
 import { useCallStore } from "~/stores/call";
 import { useSettingsStore } from "~/stores/settings";
 
@@ -131,6 +160,7 @@ export default defineComponent({
     const others = computed(() => {
       const arr = call.participants;
       const fid = call.focusParticipantId;
+      // если есть фокус — показываем всех, иначе показываем всех (focused=null, others === все участники)
       return arr.filter((p) => p.id !== fid);
     });
 
@@ -150,21 +180,31 @@ export default defineComponent({
       call.leaveCall();
       model.value = false;
     }
-
-    onMounted(async () => {
-      if (call.selectedOutputId) {
-        const audios = document.querySelectorAll("audio[playsinline]");
-        for (const a of Array.from(audios)) {
-          const el = a as any;
-          if (typeof el.setSinkId === "function") {
-            try {
-              await el.setSinkId(call.selectedOutputId);
-            } catch {}
-          }
+    onMounted(applySink);
+    watch(
+      () => model.value,
+      async (open) => {
+        if (open) {
+          try {
+            await call.resumeAnalysers();
+          } catch {}
         }
       }
-    });
+    );
 
+    async function applySink() {
+      await nextTick();
+      if (!call.selectedOutputId) return;
+      const audios = document.querySelectorAll("audio[playsinline]");
+      for (const a of Array.from(audios)) {
+        const el = a as any;
+        if (typeof el.setSinkId === "function") {
+          try {
+            await el.setSinkId(call.selectedOutputId);
+          } catch {}
+        }
+      }
+    }
     return {
       call,
       settings,
@@ -186,8 +226,25 @@ export default defineComponent({
 <style scoped>
 .tiles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
+}
+.stage {
+  position: relative;
+}
+.stage :deep(.user-tile.big .media) {
+  max-height: 70vh;
+}
+.exit-focus-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+}
+.thumbs-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
 }
 .mb-3 {
   margin-bottom: 1rem;

@@ -35,6 +35,8 @@ export type PermissionKey =
   | "moveMembers"
   | "createEvents"
   | "manageEvents"
+  | "sendAlerts" // NEW
+  | "manageAlerts" // NEW
   | "administrator";
 export type Permissions = Record<PermissionKey, boolean>;
 export interface Role {
@@ -191,6 +193,17 @@ export const permissionDescriptors: PermissionDescriptor[] = [
         key: "createPolls",
         title: "Создание опросов",
         subtitle: "Создавать опросы.",
+      },
+      {
+        key: "sendAlerts",
+        title: "Отправлять алерты",
+        subtitle: "Отправлять видео/аудио-алерты пользователям и ролям.",
+      },
+      // В «Расширенные права» добавьте (если нужно управлять библиотекой группы):
+      {
+        key: "manageAlerts",
+        title: "Управлять алертами",
+        subtitle: "Загрузка/удаление алертов группы и настройка ограничений.",
       },
     ],
   },

@@ -79,7 +79,7 @@
               class="participant-avatar"
               :color="p.isSpeaking ? 'primary' : 'grey-darken-3'"
             >
-              <v-img :src="p.avatarUrl || fallbackAvatar" cover />
+              <v-img :src="p.avatarUrl || dfAvatar" cover />
             </v-avatar>
 
             <div class="text-body-2 d-flex align-center ga-2">
@@ -189,6 +189,8 @@
 import { ref } from "vue";
 import ChannelItem from "./ChannelItem.vue";
 import { useCallStore } from "~/stores/call";
+import dfAvatar from '~/assets/profile/profile_exp.jpg'
+
 const call = useCallStore();
 interface Channel {
   id: string;
@@ -219,7 +221,6 @@ const emit = defineEmits([
   "channel-click",
 ]);
 const openDirMenu = ref(false);
-const fallbackAvatar = "/app/assets/profile/profile_exp.jpg";
 async function onChannelClick(ch: Channel) {
   emit("channel-click", ch);
 }

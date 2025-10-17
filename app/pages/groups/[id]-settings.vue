@@ -32,6 +32,7 @@ type SectionKey =
   | 'stickers'
   | 'soundboard'
   | 'appearance'
+  | 'alerts'
   | 'members'
   | 'roles'
   | 'permissions'
@@ -90,6 +91,7 @@ const map: Record<string, any> = {
   'reactions:emojis':     makeAsync(() => import('~/components/GroupsSettings/ReactionsEmojis.vue')),
   'reactions:stickers':   makeAsync(() => import('~/components/GroupsSettings/ReactionsStickers.vue')),
   'reactions:soundboard': makeAsync(() => import('~/components/GroupsSettings/ReactionsSoundboard.vue')),
+  'reactions:alerts':      makeAsync(() => import('~/components/GroupsSettings/GroupAlerts.vue')),
 
   // 3. Люди
   'people:members':     makeAsync(() => import('~/components/GroupsSettings/PeopleMembers.vue')),

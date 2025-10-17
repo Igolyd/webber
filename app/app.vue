@@ -19,6 +19,7 @@
 
     <client-only>
       <CallWindowProvider />
+      <AlertOverlayStack />
     </client-only>
 
     <!-- Theme bridge для Vuetify -->
@@ -30,6 +31,8 @@
 import CallWindowProvider from "~/components/CallWindowProvider.vue";
 import defaultLogo from "./assets/app/logo.png"
 import ThemeBridge from "./components/system/ThemeBridge.vue";
+import AlertOverlayStack from "./components/alerts/AlertOverlayStack.vue";
+import 'vue-gif-emoji-picker/dist/style.css'
 </script>
 
 <style>

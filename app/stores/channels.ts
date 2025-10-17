@@ -12,11 +12,14 @@ export interface Channel {
   type: ChannelType
   position: number
   createdAt: string
+  // NEW: ID комнаты на Janus для голосовых каналов
+  janusRoomId?: number | null
 }
 
 export const useChannelsStore = defineStore('channels', () => {
   const channels = useStorage<Channel[]>('app.channels', [])
 
+  // payload теперь может содержать janusRoomId
   function addChannel(payload: Omit<Channel, 'id' | 'createdAt'>) {
     const id = crypto.randomUUID()
     const createdAt = new Date().toISOString()
@@ -29,6 +32,7 @@ export const useChannelsStore = defineStore('channels', () => {
     channels.value = channels.value.filter(c => c.id !== id)
   }
 
+  // patch допускает janusRoomId, тип и др. поля
   function updateChannel(id: string, patch: Partial<Omit<Channel, 'id' | 'groupId'>>) {
     channels.value = channels.value.map(c => c.id === id ? { ...c, ...patch } : c)
   }

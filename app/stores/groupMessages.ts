@@ -10,6 +10,13 @@ export interface FileAttachment {
   width?: number
   height?: number
   duration?: number
+  alert?: {
+    action: 'openTextChat' | 'joinVoiceChannel' | 'callInDM'
+    context: 'dm' | 'channel'
+    groupId?: string
+    channelId?: string
+    peerId?: string
+  }
 }
 
 export type MessageType = 'text' | 'file'

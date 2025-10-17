@@ -4,6 +4,7 @@ import { useStorage } from '@vueuse/core'
 import { computed } from 'vue'
 import { useUserAccountStore } from '@/stores/user/account'
 import { useGroupsStore } from '@/stores/groups' // NEW
+import frAvatar from '@/assets/profile/profile_exp.jpg'
 
 export interface GroupMembership {
   groupId: string
@@ -235,7 +236,7 @@ export const useUsersStore = defineStore('users', () => {
     const u1 = addUser({
       name: 'Alice Johnson',
       uniqueName: 'alice',
-      avatar: '/avatars/alice.jpg',
+      avatar: frAvatar,
       banner: '#f5c542', // уже задано тобой
       badge: { id: 'vip', label: 'VIP', color: '#f5c542' },
       decoration: { id: 'rings', name: 'Rings' },
@@ -248,7 +249,7 @@ export const useUsersStore = defineStore('users', () => {
     const u2 = addUser({
       name: 'Bob Martin',
       uniqueName: 'bob',
-      avatar: '/avatars/bob.jpg',
+      avatar: frAvatar,
       banner: '#42a5f5', // NEW: синий
       badge: null,
       decoration: { id: 'lines', name: 'Lines' },

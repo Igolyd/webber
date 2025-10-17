@@ -149,14 +149,6 @@
         <div v-else>Загрузка…</div>
       </v-card-text>
     </v-card>
-
-    <!-- Плавающая панель Сохранить/Сброс -->
-    <v-slide-y-transition>
-      <div v-if="dirty" class="savebar">
-        <v-btn color="primary" @click="saveAll">Сохранить</v-btn>
-        <v-btn variant="text" @click="resetAll">Сброс</v-btn>
-      </div>
-    </v-slide-y-transition>
   </v-container>
 </template>
 
@@ -167,6 +159,16 @@ import { useAppearanceStore } from "~/stores/app/appearance";
 import { useCustomThemeStore } from "~/stores/app/themeCustom";
 
 type Theme = "light" | "dark" | "custom";
+
+// 1) Подключаем общий ActionsBar-контекст
+type ActionsCtx = {
+  setHandlers: (h: { onSave?: () => Promise<void> | void; onReset?: () => void }) => void
+  clearHandlers: () => void
+  saving: { value: boolean }
+  markDirty?: () => void
+  clearDirty?: () => void
+}
+const actions = inject<ActionsCtx | null>('settingsActions', null)
 
 const ready = ref(false);
 onMounted(() => {
@@ -188,22 +190,24 @@ const dirty = computed(() => {
   return JSON.stringify(draft) !== JSON.stringify(saved);
 });
 
-// Предпросмотр кастомной: применяем черновик, когда выбрана custom
+// Предпросмотр кастомной
 function applyDraftPreview() {
   if (themeLocal.value !== "custom") return;
-  custom.load(draft); // применяем в store
-  appearance.setTheme("custom"); // включаем кастом в Vuetify/CSS
+  custom.load(draft);
+  appearance.setTheme("custom");
 }
 
 watch(themeLocal, (v) => {
   appearance.setTheme(v);
   if (v === "custom") applyDraftPreview();
+  actions?.markDirty?.(); // помечаем грязным
 });
 
 watch(
   draft,
   () => {
     applyDraftPreview();
+    actions?.markDirty?.(); // помечаем грязным
   },
   { deep: true }
 );
@@ -224,17 +228,26 @@ function toDataUrl(file: File) {
   });
 }
 
-function saveAll() {
-  appearance.setTheme(themeLocal.value);
-  custom.load(draft); // уже применён, но сейчас ещё и зафиксируется в localStorage (внутри стора)
-}
-
-function resetAll() {
-  themeLocal.value = theme.value;
-  Object.assign(draft, custom.getSnapshot()); // восстанавливаем saved -> draft
-  appearance.setTheme(theme.value); // возвращаем тему
-  applyDraftPreview(); // если вернулись на custom — подхватит
-}
+// 2) Регистрируем обработчики в глобальном ActionsBar
+onMounted(() => {
+  actions?.setHandlers({
+    onSave: () => {
+      appearance.setTheme(themeLocal.value);
+      custom.load(draft);
+      actions?.clearDirty?.();
+    },
+    onReset: () => {
+      themeLocal.value = theme.value;
+      Object.assign(draft, custom.getSnapshot());
+      appearance.setTheme(theme.value);
+      applyDraftPreview();
+      actions?.clearDirty?.();
+    },
+  });
+});
+onBeforeUnmount(() => {
+  actions?.clearHandlers();
+});
 </script>
 
 <style scoped>

@@ -23,14 +23,14 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { useCommunicationStore } from '~/stores/user/communication'
+import dfAvatar from '~/assets/profile/profile_exp.jpg'
 
 export default defineComponent({
   setup() {
     const comm = useCommunicationStore()
     function unblock(id: string) { comm.unblock(id) }
     function openProfile(id: string) { /* TODO: переход к профилю пользователя */ }
-    const defaultAvatar = '/app/assets/profile/profile_exp.jpg'
-    return { blocked: comm.blockedUsers, unblock, openProfile, defaultAvatar }
+    return { blocked: comm.blockedUsers, unblock, openProfile, dfAvatar }
   },
 })
 </script>

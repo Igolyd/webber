@@ -7,7 +7,7 @@
           <v-card-text>
             <div class="d-flex align-center ga-4">
               <v-avatar size="72">
-                <v-img :src="profileAvatar || defaultAvatar" />
+                <v-img :src=profileAvatar || dfAvatar />
               </v-avatar>
               <div>
                 <div class="text-h6">{{ profileName || '—' }}</div>
@@ -99,6 +99,7 @@ import { defineComponent, ref, inject } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserAccountStore } from '~/stores/user/account'
 import { useProfilesStore } from '~/stores/user/profiles'
+import dfAvatar from '../../../assets/profile/profile_exp.jpg'
 
 type NavigateFn = (payload: { group: 'user' | 'app'; section: any }) => void
 
@@ -113,7 +114,6 @@ export default defineComponent({
     const { name: profileName, avatar: profileAvatar, banner: profileBanner } = storeToRefs(profilesStore)
 
     const confirmDialog = ref(false)
-    const defaultAvatar = '/app/assets/profile/profile_exp.jpg'
     const navigate = inject<NavigateFn>('settingsNavigate')
 
     function saveContacts(values: { email?: string; phone?: string }) {
@@ -155,7 +155,6 @@ export default defineComponent({
 
       // UI-состояние и методы
       confirmDialog,
-      defaultAvatar,
       saveContacts,
       saveUsername,
       changePass,

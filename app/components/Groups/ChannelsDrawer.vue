@@ -35,6 +35,7 @@
         @edit-channel="$emit('edit-channel', $event)"
         @delete-channel="$emit('delete-channel', $event)"
         @channel-click="$emit('channel-click', $event)"
+        @open-create-channel="$emit('open-create-channel')"
       />
     </v-list>
     <template #append>

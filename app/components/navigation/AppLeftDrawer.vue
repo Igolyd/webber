@@ -17,10 +17,13 @@
           <v-img :src="currentIcon" max-width="24" class="mr-2" />
           <span>{{ currentTitle }}</span>
         </div>
-        <div class="nav-item" @click="visitStore">
+        <NuxtLink to="/market">
+        <div class="nav-item">
           <v-img :src="cartIcon" max-width="24" class="mr-2" />
           <span>Магазин</span>
         </div>
+        </NuxtLink>
+
       </div>
 
       <v-divider class="my-2" />

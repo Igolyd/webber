@@ -29,17 +29,13 @@
     >
       <template #append>
         <MyProfileTabNavigation
-          name="John Doe"
-          description="Software Engineer"
-          class="px-2 pb-2"
+          class="px-1 pb-1"
         />
       </template>
     </ChannelsDrawer>
     <UsersDrawer
       v-model="usersDrawer"
       :is-sm-and-down="isSmAndDown"
-      :users="users"
-      @view-user="viewUserProfile"
     />
     <ContentArea
       class="content-area"
@@ -241,22 +237,93 @@ function onSubmitChannel(payload: {
   directoryId: string | null;
 }) {
   if (!currentGroupId.value) return;
+
+  // Редактирование существующего
   if (payload.id) {
+    const prev = channelsStore.getById(payload.id);
+    if (!prev) return;
+
+    // Смена типа: text -> voice
+    if (prev.type === "text" && payload.type === "voice") {
+      // создаём комнату в Janus
+      call
+        .createJanusRoom({
+          description: `${payload.name} (${currentGroupId.value})`,
+        })
+        .then((roomId) => {
+          channelsStore.updateChannel(payload.id!, {
+            name: payload.name,
+            type: "voice",
+            directoryId: payload.directoryId ?? null,
+            janusRoomId: roomId,
+          });
+        })
+        .catch((e) => {
+          console.error("Failed to create Janus room for updated channel", e);
+        });
+      return;
+    }
+
+    // Смена типа: voice -> text (по желанию удаляем комнату Janus)
+    if (prev.type === "voice" && payload.type === "text") {
+      const rid = prev.janusRoomId;
+      channelsStore.updateChannel(payload.id, {
+        name: payload.name,
+        type: "text",
+        directoryId: payload.directoryId ?? null,
+        janusRoomId: null,
+      });
+      if (typeof rid === "number") {
+        call.destroyJanusRoom(rid).catch((e) => {
+          console.warn("Janus destroy on type change failed", e);
+        });
+      }
+      return;
+    }
+
+    // Обычное обновление без смены типа
     channelsStore.updateChannel(payload.id, {
       name: payload.name,
       type: payload.type,
       directoryId: payload.directoryId ?? null,
     });
+    return;
+  }
+
+  // Создание нового
+  const nextPos = channelsStore.getByGroup(currentGroupId.value).length + 1;
+
+  if (payload.type === "voice") {
+    // 1) Сначала создаём комнату на Janus
+    call
+      .createJanusRoom({
+        description: `${payload.name} (${currentGroupId.value})`,
+      })
+      .then((roomId) => {
+        // 2) Добавляем канал с привязкой
+        const ch = channelsStore.addChannel({
+          groupId: currentGroupId.value,
+          name: payload.name,
+          type: "voice",
+          directoryId: payload.directoryId ?? null,
+          position: nextPos,
+          janusRoomId: roomId,
+        });
+        // текстовые активируем, голосовые — по клику
+      })
+      .catch((e) => {
+        console.error("Failed to create Janus room", e);
+      });
   } else {
-    const nextPos = channelsStore.getByGroup(currentGroupId.value).length + 1;
     const ch = channelsStore.addChannel({
       groupId: currentGroupId.value,
       name: payload.name,
-      type: payload.type,
+      type: "text",
       directoryId: payload.directoryId ?? null,
       position: nextPos,
+      janusRoomId: null,
     });
-    if (ch.type === "text") state.activeTextChannelId = ch.id;
+    state.activeTextChannelId = ch.id;
   }
 }
 function onSubmitDirectory(payload: { id?: string; name: string }) {
@@ -275,7 +342,23 @@ function onSubmitDirectory(payload: { id?: string; name: string }) {
   }
 }
 function deleteChannel(id: string) {
+  const ch = channelsStore.getById(id);
+  if (!ch) return;
+
+  // Если сейчас находимся в этой комнате — выходим из звонка
+  if (call.activeVoiceChannelId === id) {
+    call.leaveCall().catch(() => {});
+  }
+
+  // Если голосовой с привязкой — удаляем комнату на Janus
+  if (ch.type === "voice" && typeof ch.janusRoomId === "number") {
+    call.destroyJanusRoom(ch.janusRoomId).catch((e) => {
+      console.warn("Failed to destroy Janus room", e);
+    });
+  }
+
   channelsStore.removeChannel(id);
+
   if (state.activeTextChannelId === id) {
     const firstText = channelsStore
       .getByGroup(currentGroupId.value)
@@ -412,14 +495,10 @@ function openPrivacySettings() {
 function selectTextChannel(id: string) {
   state.activeTextChannelId = id;
 }
-function viewUserProfile(id: number, name: string) {
-  console.log("view profile", id, name);
-}
 const toggleChannelsDrawer = () =>
   (channelsDrawer.value = !channelsDrawer.value);
 const toggleUsersDrawer = () => (usersDrawer.value = !usersDrawer.value);
 const toggleVideoRoom = () => (state.isVideoRoomOpen = !state.isVideoRoomOpen);
-const users = computed(() => state.users);
 const isVideoRoomOpen = computed({
   get: () => state.isVideoRoomOpen,
   set: (v) => (state.isVideoRoomOpen = v),

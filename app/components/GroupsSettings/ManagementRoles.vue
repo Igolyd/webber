@@ -204,7 +204,7 @@
                     >
                       <template #prepend>
                         <v-avatar size="28" class="mr-3">
-                          <v-img :src="u.avatar || '/app/assets/profile/profile_exp.jpg'" cover />
+                          <v-img :src="u.avatar || dfAvatar" cover />
                         </v-avatar>
                       </template>
                       <v-list-item-title>{{ u.name }}</v-list-item-title>
@@ -263,6 +263,7 @@ import { useRolesStore, type Role, permissionDescriptors, getDefaultPermissions 
 import { useGroupsStore } from '~/stores/groups'
 import { useUsersStore, type AppUser } from '~/stores/users'
 import { useObjectUrl } from '@vueuse/core'
+import dfAvatar from '~/assets/profile/profile_exp.jpg'
 
 const props = defineProps<{
   groupId: string
@@ -397,17 +398,6 @@ function removeRole() {
   } catch (e) {
     console.warn(e)
   }
-}
-
-// Иконка загрузка/удаление
-async function onIconSelected(files: File | File[] | null) {
-  const file = Array.isArray(files) ? files[0] : files
-  if (!file) return
-  const { url } = useObjectUrl(file)
-  form.icon = url.value || ''
-}
-function removeIcon() {
-  form.icon = ''
 }
 
 // ====== Вкладка "Пользователи" ======

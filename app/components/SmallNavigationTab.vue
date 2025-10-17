@@ -11,11 +11,13 @@
         icon="mdi-message-text-outline"
         @click="openPrivateMessage"
         :title="'ЛС'"
-      >
-      </v-btn>
+      ></v-btn>
       <v-btn icon @click="$emit('toggleChannels')" :title="'Каналы'">
         <v-icon>mdi-view-list</v-icon>
       </v-btn>
+      <NuxtLink to="/market">
+        <v-icon>mdi-store</v-icon>
+      </NuxtLink>
     </v-container>
 
     <v-list density="compact" nav>
@@ -28,7 +30,12 @@
       >
         <template #prepend>
           <v-avatar size="40">
-            <v-img :src="group.avatar" />
+            <template v-if="group.avatar && group.avatar.length">
+              <v-img :src="group.avatar" :alt="group.name" cover />
+            </template>
+            <template v-else>
+              <v-icon>mdi-account-group-outline</v-icon>
+            </template>
           </v-avatar>
         </template>
       </v-list-item>
@@ -40,18 +47,18 @@
 import { ref } from "vue";
 
 interface Group {
-  id: number;
+  id: string; // фикс: id — строка, как в сторе
   name: string;
-  avatar: string;
+  avatar?: string; // фикс: avatar может отсутствовать
 }
 
 const props = defineProps<{
   groups: Group[];
-  selectedGroupId?: number;
+  selectedGroupId?: string; // фикс: строка
 }>();
 
 const emit = defineEmits<{
-  (e: "updateSelectedGroup", id: number): void;
+  (e: "updateSelectedGroup", id: string): void;
   (e: "toggleChannels"): void;
 }>();
 

@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { useStorage } from "@vueuse/core";
 import { computed, reactive, watchEffect } from "vue";
+
 export interface GroupTemplate {
   id: string;
   name: string;
@@ -42,6 +43,10 @@ export interface GroupProfileFields {
 }
 type ProfilesDict = Record<string, GroupProfileFields>;
 
+function sanitizeTag(input?: string) {
+  return (input || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5);
+}
+
 function getDefaultProfile(name = "Новая группа"): GroupProfileFields {
   return {
     name,
@@ -53,7 +58,7 @@ function getDefaultProfile(name = "Новая группа"): GroupProfileFields
     badge: null,
     decoration: null,
     effects: [],
-    groupTag: "general",
+    groupTag: "",
   };
 }
 
@@ -79,9 +84,14 @@ export const useGroupsStore = defineStore("groups", () => {
         if (group.avatar) profilesDict.value[groupId].avatar = group.avatar;
       }
     }
+    profilesDict.value[groupId].groupTag = sanitizeTag(profilesDict.value[groupId].groupTag);
     return profilesDict.value[groupId];
   }
-
+  // NEW: получить профиль группы по id (с ensure)
+  function getProfile(groupId: string) {
+    if (!groupId) return null;
+    return ensureProfile(groupId);
+  }
   watchEffect(() => {
     if (!activeGroupId.value) {
       if (groups.value.length > 0) {
@@ -143,17 +153,26 @@ export const useGroupsStore = defineStore("groups", () => {
   const badge = computed(() => currentProfile.value?.badge ?? null);
   const decoration = computed(() => currentProfile.value?.decoration ?? null);
   const effects = computed(() => currentProfile.value?.effects ?? []);
-  const groupTag = computed(() => currentProfile.value?.groupTag ?? "general");
+  const groupTag = computed(() => sanitizeTag(currentProfile.value?.groupTag || ""));
 
   function updateMainProfile(payload: Partial<GroupProfileFields>) {
     if (!activeGroupId.value) return;
     const prof = ensureProfile(activeGroupId.value);
-    Object.assign(prof, payload);
+
+    // частичное обновление с нормализацией groupTag
+    const patch: Partial<GroupProfileFields> = { ...payload };
+    if (typeof patch.groupTag === "string") {
+      patch.groupTag = sanitizeTag(patch.groupTag);
+    }
+
+    Object.assign(prof, patch);
+
+    // синхронизировать базовую запись группы (name/avatar)
     const idx = groups.value.findIndex((g) => g.id === activeGroupId.value);
     if (idx !== -1) {
       const g = { ...groups.value[idx] };
-      if (typeof payload.name === "string") g.name = payload.name;
-      if (typeof payload.avatar === "string") g.avatar = payload.avatar;
+      if (typeof patch.name === "string") g.name = patch.name;
+      if (typeof patch.avatar === "string") g.avatar = patch.avatar;
       const copy = [...groups.value];
       copy[idx] = g;
       groups.value = copy;
@@ -215,5 +234,6 @@ export const useGroupsStore = defineStore("groups", () => {
     saveAndReport,
     // NEW:
     ensureSeed,
+    getProfile,
   };
 });

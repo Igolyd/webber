@@ -18,6 +18,10 @@
         >Интеграция</v-list-item
       >
       <v-list-item @click="select('user', 'privacy')">Приватность</v-list-item>
+      <v-list-item @click="select('user', 'alerts')">Настройки алертсов</v-list-item>
+      <v-list-item @click="select('user', 'emoji')">Эмодзи</v-list-item>
+      <v-list-item @click="select('user', 'stickers')">Стикеры</v-list-item>
+      
 
       <v-list-subheader>Настройки приложения</v-list-subheader>
       <v-list-item @click="select('app', 'notifications')"
@@ -85,6 +89,9 @@ type SectionKey =
   | "profiles"
   | "privacyAC"
   | "SetAC"
+  | "alerts"
+  | "emoji"
+  | "stickers"
   | "overlay";
 
 export default {

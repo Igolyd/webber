@@ -22,9 +22,11 @@
       <v-list-item @click="select('reactions', 'stickers')"
         >Стикеры</v-list-item
       >
+
       <v-list-item @click="select('reactions', 'soundboard')"
         >Звуковая панель</v-list-item
       >
+      <v-list-item @click="select('reactions', 'alerts')">Алерты</v-list-item>
 
       <v-list-subheader>Люди</v-list-subheader>
       <v-list-item @click="select('people', 'members')">Участники</v-list-item>
@@ -79,6 +81,7 @@ type SectionKey =
   | "stickers"
   | "soundboard"
   | "members"
+  | "alerts"
   | "roles"
   | "permissions"
   | "safety"
