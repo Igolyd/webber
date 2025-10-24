@@ -243,7 +243,7 @@ const unassignedUsers = computed<AppUser[]>(() => {
   if (!activeGroupId.value) return []
   return users.value.filter((u) => {
     const mem = u.memberships.find((m) => m.groupId == activeGroupId.value)
-    return mem ? mem.roleIds.length = 0 : false
+    return mem ? mem.roleIds.length === 0 : false   // FIX: было = 0
   })
 })
 
@@ -254,17 +254,17 @@ function isGradientLike(v?: string) {
 }
 
 function itemStyle(user: AppUser, isHovering: boolean) {
-  const c = (user.badge as any)?.color as string | undefined
   const style: Record<string, string> = {
     transition: 'filter .18s ease, background .18s ease, background-color .18s ease, border-radius .18s ease',
-    filter: isHovering ? 'none' : 'opacity(0.75) saturate(0.92) brightness(0.98)',
+    filter: isHovering ? 'none' : 'opacity(0.85) saturate(0.98) brightness(0.98)',
     cursor: 'pointer',
     borderRadius: '12px',
     overflow: 'hidden',
   }
-  if (c) {
-    if (isGradientLike(c)) style.background = c
-    else style.backgroundColor = c
+  const banner = user.banner
+  if (isHovering && banner) {
+    if (isGradientLike(banner)) style.background = banner
+    else style.backgroundColor = banner
   }
   return style
 }

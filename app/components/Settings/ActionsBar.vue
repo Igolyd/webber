@@ -37,5 +37,9 @@ const model = computed({
 <style scoped>
 .settings-actions-snackbar :deep(.v-snackbar__content) {
   padding: 8px 12px;
+  background: var(--app-surface-3);
+  color: var(--app-on-surface);
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 12px;
 }
 </style>

@@ -1,6 +1,6 @@
 // plugins/theme-cssvars.client.ts
 import { watch } from 'vue'
-import { lightVars, darkVars } from '../../theme/presets'
+import { systemVars, lightAlias, darkAlias, type SystemTheme } from '../../theme/presets'
 import { useAppearanceStore } from '~/stores/app/appearance'
 import { useCustomThemeStore } from '~/stores/app/themeCustom'
 
@@ -14,14 +14,20 @@ export default defineNuxtPlugin(() => {
   const custom = useCustomThemeStore()
 
   const apply = () => {
-    if (appearance.theme == 'light') applyCssVars(lightVars)
-    else if (appearance.theme == 'dark') applyCssVars(darkVars)
-    else applyCssVars(custom.cssVars)
+    const raw = appearance.theme.value as string
+    const effective: SystemTheme | 'custom' =
+      raw == 'light' ? lightAlias :
+      raw == 'dark' ? darkAlias :
+      (['classic','sakura','ocean','clouds','lime','hacker','white','void','custom'] as const).includes(raw as any)
+        ? (raw as any)
+        : 'classic'
+
+    if (effective === 'custom') applyCssVars(custom.cssVars.value)
+    else applyCssVars(systemVars[effective])
   }
 
-  watch(() => appearance.theme, apply, { immediate: true })
-  // computed возвращает новый объект — deep не обязателен
-  watch(() => custom.cssVars, () => {
-    if (appearance.theme === 'custom') applyCssVars(custom.cssVars)
+  watch(() => appearance.theme.value, apply, { immediate: true })
+  watch(custom.cssVars, () => {
+    if (appearance.normalizedTheme.value === 'custom') applyCssVars(custom.cssVars.value)
   })
 })

@@ -5,7 +5,7 @@
     <!-- Overlay для читаемости поверх картинок -->
     <div class="app-bg-overlay"></div>
 
-    <v-app-bar color="black" elevation="0" height="48">
+    <v-app-bar color="transparent" elevation="0" height="48" class="app-bar">
       <v-spacer />
       <v-avatar :size="30" :rounded="99999">
         <v-img :src="defaultLogo" cover />
@@ -70,8 +70,28 @@ import 'vue-gif-emoji-picker/dist/style.css'
   opacity: var(--app-bg-overlay-opacity);
 }
 
-/* Контент ниже app-bar */
+html,
+body,
+#\__nuxt {
+  height: 100%;
+  overflow: hidden; /* прячем глобальный скролл */
+}
+
+.v-application,
+.v-application__wrap {
+  height: 100%;
+  overflow: hidden; /* на всякий случай */
+}
+
 .app-main {
-  height: calc(100vh - 48px);
+  /* без явной высоты — Vuetify сам учитывает v-app-bar */
+  min-height: 0;     /* важно, чтобы flex-контейнеры внутри могли сжиматься */
+  overflow: hidden;  /* убираем прокрутку у main, пусть скроллятся внутренние области */
+}
+.app-bar {
+  backdrop-filter: blur(6px);
+  background: color-mix(in oklab, var(--app-bg-overlay-color) 0%, var(--app-surface-3) 30%);
+  border-bottom: 1px solid var(--app-divider);
+  color: var(--app-on-surface);
 }
 </style>

@@ -1381,10 +1381,15 @@ function onCopiedFromPreview() {
   flex: 1 1 auto;
   overflow: auto;
   padding: 8px;
+  padding-top: 0;
   background: transparent;
 }
 .messages-list {
   background: transparent;
+}
+.messages-list :deep(.v-list) {
+  padding-top: 0;
+  padding-bottom: 8px;
 }
 .message-row {
   display: flex;

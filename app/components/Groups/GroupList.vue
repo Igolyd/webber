@@ -1,5 +1,5 @@
 <template>
-  <v-list>
+  <v-list class="py-0">
     <v-hover
       v-for="group in groups"
       :key="group.id"

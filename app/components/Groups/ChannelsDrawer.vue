@@ -97,6 +97,7 @@ const model = computed({
   background-color: transparent !important;
   color: var(--app-text-color);
   border-right: 1px solid var(--app-border-color);
+  border-top: 1px solid var(--app-border-color);
   box-shadow: none !important;
 }
 </style>

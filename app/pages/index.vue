@@ -10,7 +10,27 @@
     />
 
     <div class="content-area">
-      <ContentHeader
+
+
+      <section class="content-scroll">
+        <v-card flat class="list-card">
+          <template v-if="activeCategoryId === 1">
+            <GroupList :groups="groupsStore.groups" @opened="onOpenFromList" />
+          </template>
+          <template v-else>
+            <FriendList :friends="myFriends" />
+          </template>
+        </v-card>
+      </section>
+    </div>
+
+    <ActivityUserTab
+      v-model="rightDrawer"
+      :permanent="!isSmAndDown"
+      :temporary="isSmAndDown"
+      :width="320"
+    />
+          <ContentHeader
         :title="activeCategoryName"
         :plusTitle="currentTitle"
         :showSearch="true"
@@ -31,41 +51,22 @@
           </v-btn>
         </template>
       </ContentHeader>
-
-      <section class="content-scroll">
-        <v-card flat class="list-card">
-          <template v-if="activeCategoryId === 1">
-            <GroupList :groups="groupsStore.groups" @opened="onOpenFromList" />
-          </template>
-          <template v-else>
-            <FriendList :friends="myFriends" />
-          </template>
-        </v-card>
-      </section>
-    </div>
-
-    <ActivityUserTab
-      v-model="rightDrawer"
-      :permanent="!isSmAndDown"
-      :temporary="isSmAndDown"
-      :width="320"
-    />
   </v-container>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from 'vue'
-import { useDisplay } from 'vuetify'
-import AppLeftDrawer from '@/components/navigation/AppLeftDrawer.vue'
-import ContentHeader from '@/components/layout/ContentHeader.vue'
-import GroupList from '@/components/Groups/GroupList.vue'
-import FriendList from '@/components/friends/FriendList.vue'
-import ActivityUserTab from '~/components/ActivityUserTab.vue'
-import { useGroupsStore } from '~/stores/groups'
-import { useUsersStore } from '~/stores/users'
+import { defineComponent, ref, computed } from "vue";
+import { useDisplay } from "vuetify";
+import AppLeftDrawer from "@/components/navigation/AppLeftDrawer.vue";
+import ContentHeader from "@/components/layout/ContentHeader.vue";
+import GroupList from "@/components/Groups/GroupList.vue";
+import FriendList from "@/components/friends/FriendList.vue";
+import ActivityUserTab from "~/components/ActivityUserTab.vue";
+import { useGroupsStore } from "~/stores/groups";
+import { useUsersStore } from "~/stores/users";
 
 export default defineComponent({
-  name: 'IndexPage',
+  name: "IndexPage",
   components: {
     AppLeftDrawer,
     ContentHeader,
@@ -74,44 +75,44 @@ export default defineComponent({
     ActivityUserTab,
   },
   setup() {
-    const groupsStore = useGroupsStore()
-    const usersStore = useUsersStore()
-    groupsStore.ensureSeed()
-    usersStore.ensureSeed()
+    const groupsStore = useGroupsStore();
+    const usersStore = useUsersStore();
+    groupsStore.ensureSeed();
+    usersStore.ensureSeed();
 
-    const { smAndDown } = useDisplay()
-    const isSmAndDown = computed(() => smAndDown.value)
+    const { smAndDown } = useDisplay();
+    const isSmAndDown = computed(() => smAndDown.value);
 
-    const leftDrawer = ref(true)
-    const rightDrawer = ref(!isSmAndDown.value)
-    const activeCategoryId = ref<number>(1)
-    const activeCategoryName = ref<string>('Группы')
+    const leftDrawer = ref(true);
+    const rightDrawer = ref(!isSmAndDown.value);
+    const activeCategoryId = ref<number>(1);
+    const activeCategoryName = ref<string>("Группы");
 
-    const myFriends = computed(() => usersStore.myFriends)
+    const myFriends = computed(() => usersStore.myFriends);
     const currentTitle = computed(() =>
-      activeCategoryId.value === 1 ? 'Создать группу' : 'Найти друга'
-    )
+      activeCategoryId.value === 1 ? "Создать группу" : "Найти друга"
+    );
 
-    const leftDrawerRef = ref<InstanceType<typeof AppLeftDrawer> | null>(null)
+    const leftDrawerRef = ref<InstanceType<typeof AppLeftDrawer> | null>(null);
 
     const triggerPlus = () => {
-      leftDrawerRef.value?.triggerCategoryAction()
-    }
+      leftDrawerRef.value?.triggerCategoryAction();
+    };
 
     const openSearch = () => {
       // чтобы не дублировать состояние, делегируем Drawer-у
       if (activeCategoryId.value === 2) {
-        leftDrawerRef.value?.triggerCategoryAction()
+        leftDrawerRef.value?.triggerCategoryAction();
       } else {
         // в режиме "Группы" кнопка "лупа" может быть просто заглушкой или
         // открывать доп. поиск — опционально. Сейчас делегируем в Drawer.
-        leftDrawerRef.value?.triggerCategoryAction()
+        leftDrawerRef.value?.triggerCategoryAction();
       }
-    }
+    };
 
     const onOpenFromList = () => {
-      if (isSmAndDown.value) leftDrawer.value = false
-    }
+      if (isSmAndDown.value) leftDrawer.value = false;
+    };
 
     return {
       groupsStore,
@@ -127,13 +128,15 @@ export default defineComponent({
       triggerPlus,
       openSearch,
       onOpenFromList,
-    }
+    };
   },
-})
+});
 </script>
 
 <style scoped>
-.h-100 { height: 100%; }
+.h-100 {
+  height: 100%;
+}
 
 /* Внутренняя поверхность */
 .content-area {
@@ -142,19 +145,26 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   height: 100%;
-   background: transparent;
+  background: transparent;
 }
 
 .content-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  padding: 8px;
+  
 }
 
 .list-card {
-  background: var(--app-card-bg);
+  background: var(--app-surface);
+  color: var(--app-on-surface);
+  border: 1px solid var(--app-outline-variant);
+  border-radius: 0;
   height: 100%;
   overflow: auto;
+  padding: 0%;
+}
+.content-scroll {
+  /* padding: 12px; */
 }
 </style>

@@ -477,7 +477,12 @@ const snackbar = ref<{ open: boolean; text: string }>({ open: false, text: '' })
 </script>
 
 <style scoped>
-.border-primary {
-  border: 2px solid var(--v-theme-primary);
+:root {
+  --v-theme-primary: var(--app-primary);
+  --v-theme-on-primary: var(--app-on-primary);
+  --v-theme-surface-variant: var(--app-surface-variant);
+  --v-theme-on-surface: var(--app-on-surface);
+  --v-theme-outline: var(--app-outline);
 }
+.border-primary { border: 2px solid var(--app-primary); }
 </style>

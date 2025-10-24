@@ -3,36 +3,6 @@
     <!-- Левый Drawer -->
     <AppLeftDrawer v-model="leftDrawer" :width="360" />
 
-    <!-- Центр: чат -->
-    <div class="content-area">
-      <header class="content-header">
-        <h2 class="text-h6"># {{ activeTextChannelName }}</h2>
-        <div class="spacer"></div>
-        <v-btn
-          icon
-          :title="'Участники'"
-          aria-label="Участники"
-          @click="$emit('toggle-users')"
-        >
-          <v-icon>mdi-account-multiple-outline</v-icon>
-        </v-btn>
-        <v-btn
-          icon
-          :title="'Видео-комната'"
-          aria-label="Видео-комната"
-          @click="$emit('toggle-video')"
-        >
-          <v-icon>mdi-video-outline</v-icon>
-        </v-btn>
-      </header>
-
-      <section class="content-scroll">
-        <v-card flat class="messages-theme pa-0">
-          <ChatWindow context="channel" :channel-id="activeTextChannelId" />
-        </v-card>
-      </section>
-    </div>
-
     <!-- Правая панель: профиль друга -->
     <v-navigation-drawer
       v-model="rightDrawer"
@@ -68,7 +38,35 @@
         >
       </div>
     </v-navigation-drawer>
+    <div class="content-area">
+      <v-navigation-drawer
+        location="top"
+        :model-value="true"
+        :height="headerHeight"
+        :width="headerHeight"
+        absolute
+        floating
+        elevation="0"
+        class="content-header-drawer"
+      >
+        <div class="content-header">
+          <div class="spacer"></div>
+          <v-btn icon :title="'Участники'" aria-label="Участники" @click="$emit('toggle-users')">
+            <v-icon>mdi-account-multiple-outline</v-icon>
+          </v-btn>
+          <v-btn icon :title="'Видео-комната'" aria-label="Видео-комната" @click="$emit('toggle-video')"
+>
+            <v-icon>mdi-video-outline</v-icon>
+          </v-btn>
+        </div>
+      </v-navigation-drawer>
 
+      <section class="content-scroll">
+        <v-card flat class="messages-theme pa-0">
+          <ChatWindow context="dm" :peer-id="peerId" />
+        </v-card>
+      </section>
+    </div>
     <!-- Диалог подтверждения удаления из друзей -->
     <v-dialog v-model="confirmRemoveDialog" max-width="420">
       <v-card>
@@ -86,7 +84,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-container>
 </template>
 
@@ -100,17 +97,12 @@ import { useMessagesStore } from "@/stores/messages";
 import AppLeftDrawer from "@/components/navigation/AppLeftDrawer.vue";
 import ChatWindow from "~/components/chat/ChatWindow.vue";
 
-defineProps<{
-  activeTextChannelName: string
-  activeTextChannelId: string
-  isVideoRoomOpen: boolean
-}>()
-defineEmits(['toggle-users', 'toggle-video'])
 const route = useRoute();
 const router = useRouter();
 const { smAndDown } = useDisplay();
 const isSmAndDown = computed(() => smAndDown.value);
-
+const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
+defineEmits(["toggle-users", "toggle-video"]);
 const users = useUsersStore();
 const account = useUserAccountStore();
 const messagesStore = useMessagesStore();
@@ -174,29 +166,43 @@ const confirmRemoveConfirm = () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1f1f1f;
+  background: transparent;
 }
+
+.content-header-drawer {
+  border-bottom: 1px solid var(--app-border-color);
+  border-top: 1px solid var(--app-border-color);
+  background: color-mix(in oklab, var(--app-surface) 70%, transparent);
+}
+
 .content-header {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #2c2c2c;
+  height: 100%;
 }
-.content-header .spacer { flex: 1; }
+.content-header .spacer {
+  flex: 1;
+}
+
 .content-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   padding: 0;
 }
+
 .messages-theme {
-  background: #1f1f1f;
+  background: transparent;
   height: 100%;
   overflow: hidden;
+  padding-top: 0;
 }
+
 @media (max-width: 600px) {
-  .content-scroll { padding: 0; }
-  .content-header { padding: 6px 8px; }
+  .content-header {
+    padding: 6px 8px;
+  }
 }
 </style>

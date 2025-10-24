@@ -43,7 +43,8 @@ export default defineNuxtConfig({
     configFile: './formkit.config.ts', // создадим файл на шаге 3
   },
   css: [
-        '@formkit/themes/genesis' // базовая тема FormKit
+        '@formkit/themes/genesis', // базовая тема FormKit
+         '~/assets/css/theme-vars.css',
   ],
 
   vuetify: {

@@ -1,11 +1,6 @@
 <!-- components/Settings/SettingsPanel.vue -->
 <template>
-  <v-navigation-drawer
-    app
-    permanent
-    color="grey-lighten-3"
-    class="settings-panel"
-  >
+  <v-navigation-drawer app permanent class="settings-panel">
     <v-list density="compact">
       <v-list-subheader>Настройки пользователя</v-list-subheader>
       <v-list-item @click="select('user', 'account')">Аккаунт</v-list-item>
@@ -18,10 +13,11 @@
         >Интеграция</v-list-item
       >
       <v-list-item @click="select('user', 'privacy')">Приватность</v-list-item>
-      <v-list-item @click="select('user', 'alerts')">Настройки алертсов</v-list-item>
+      <v-list-item @click="select('user', 'alerts')"
+        >Настройки алертсов</v-list-item
+      >
       <v-list-item @click="select('user', 'emoji')">Эмодзи</v-list-item>
       <v-list-item @click="select('user', 'stickers')">Стикеры</v-list-item>
-      
 
       <v-list-subheader>Настройки приложения</v-list-subheader>
       <v-list-item @click="select('app', 'notifications')"
@@ -95,7 +91,7 @@ type SectionKey =
   | "overlay";
 
 export default {
-  emits: ["navigate"],
+  emits: ["navigate", "logout"], // добавили logout
   methods: {
     select(group: GroupKey, section: SectionKey) {
       this.$emit("navigate", { group, section });
@@ -109,5 +105,18 @@ export default {
   width: 280px;
   position: sticky;
   top: 0;
+  background: color-mix(
+    in oklab,
+    var(--app-surface-2) 85%,
+    transparent
+  ) !important;
+  backdrop-filter: blur(6px);
+  border-right: 1px solid var(--app-divider);
+}
+.settings-panel :deep(.v-list-item:hover) {
+  background: var(--app-hover-color);
+}
+.settings-panel :deep(.v-list-subheader) {
+  color: var(--app-on-surface-variant);
 }
 </style>

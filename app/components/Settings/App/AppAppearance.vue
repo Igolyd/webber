@@ -10,8 +10,14 @@
             name="theme"
             v-model="themeLocal"
             :options="[
-              { label: 'Светлая', value: 'light' },
-              { label: 'Тёмная', value: 'dark' },
+              { label: 'Классика (тёмно‑фиолетовая)', value: 'classic' },
+              { label: 'Сакура (светло‑фиолетовая)', value: 'sakura' },
+              { label: 'Океан (тёмно‑синяя)', value: 'ocean' },
+              { label: 'Облака (светло‑синяя)', value: 'clouds' },
+              { label: 'Лайм (светло‑зелёная)', value: 'lime' },
+              { label: 'Хакер (тёмно‑зелёная)', value: 'hacker' },
+              { label: 'Белый свет', value: 'white' },
+              { label: 'Тьма', value: 'void' },
               { label: 'Кастомная', value: 'custom' },
             ]"
           />
@@ -158,17 +164,29 @@ import { storeToRefs } from "pinia";
 import { useAppearanceStore } from "~/stores/app/appearance";
 import { useCustomThemeStore } from "~/stores/app/themeCustom";
 
-type Theme = "light" | "dark" | "custom";
+type Theme =
+  | "classic"
+  | "sakura"
+  | "ocean"
+  | "clouds"
+  | "lime"
+  | "hacker"
+  | "custom"
+  | "light"
+  | "dark";
 
 // 1) Подключаем общий ActionsBar-контекст
 type ActionsCtx = {
-  setHandlers: (h: { onSave?: () => Promise<void> | void; onReset?: () => void }) => void
-  clearHandlers: () => void
-  saving: { value: boolean }
-  markDirty?: () => void
-  clearDirty?: () => void
-}
-const actions = inject<ActionsCtx | null>('settingsActions', null)
+  setHandlers: (h: {
+    onSave?: () => Promise<void> | void;
+    onReset?: () => void;
+  }) => void;
+  clearHandlers: () => void;
+  saving: { value: boolean };
+  markDirty?: () => void;
+  clearDirty?: () => void;
+};
+const actions = inject<ActionsCtx | null>("settingsActions", null);
 
 const ready = ref(false);
 onMounted(() => {

@@ -32,7 +32,7 @@
                     <!-- Оставляем компактный аватар, BannerAvatar в мини-виде тяжёлый.
                          Баннер полноценно показываем в карточках (напр., GroupMemberProfileCard) -->
                     <v-avatar :size="avatarSize" :rounded="99999">
-                      <v-img :src="profiles.avatar || defaultAvatar" cover />
+                      <v-img :src="profiles.avatar || defaultAvatar" cover eager />
                     </v-avatar>
                     <span
                       class="mini-status-dot"

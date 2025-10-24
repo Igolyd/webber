@@ -20,15 +20,16 @@
       </NuxtLink>
     </v-container>
 
-    <v-list density="compact" nav>
+    <v-list density="compact" nav class="center-list">
       <v-list-item
         v-for="group in groups"
         :key="group.id"
         :active="group.id === selectedGroupId"
         rounded="lg"
+        class="centered-item px-0"
         @click="$emit('updateSelectedGroup', group.id)"
       >
-        <template #prepend>
+        <div class="w-100 d-flex justify-center">
           <v-avatar size="40">
             <template v-if="group.avatar && group.avatar.length">
               <v-img :src="group.avatar" :alt="group.name" cover />
@@ -37,7 +38,7 @@
               <v-icon>mdi-account-group-outline</v-icon>
             </template>
           </v-avatar>
-        </template>
+        </div>
       </v-list-item>
     </v-list>
   </v-navigation-drawer>
@@ -85,5 +86,14 @@ const openPrivateMessage = () => {
   padding-top: 12px;
   padding-right: 2px;
   padding-left: 2px;
+}
+
+/* Центрируем содержимое элемента списка и убираем боковые паддинги */
+.center-list :deep(.v-list-item) {
+  padding-inline: 0;
+}
+.centered-item :deep(.v-list-item__content) {
+  display: flex;
+  justify-content: center;
 }
 </style>

@@ -1,23 +1,28 @@
 <template>
   <v-navigation-drawer
     location="bottom"
-    rail
     floating
     permanent
+    :height="drawerHeight"
+    :width="drawerHeight"
     class="input-multi"
   >
     <div class="wrap">
       <v-row class="align-center" no-gutters>
-        <!-- Текстовая область -->
         <v-col class="pr-2">
           <v-textarea
-            v-model="inner"
-            variant="outlined"
-            density="comfortable"
-            auto-grow
+            ref="vta"
+            v-model="innerLimited"
+            class="input-field"
+            variant="plain"
+            density="compact"
             :rows="1"
+            :maxlength="MAX_LENGTH"
+            no-resize
             :placeholder="placeholder"
             hide-details
+            @input="onInputLimit"
+            @paste="onPasteLimit"
             @keydown.enter.exact.prevent="onSubmit"
           />
         </v-col>
@@ -42,7 +47,6 @@
             </template>
 
             <div class="pa-2 picker">
-              <!-- Ряд паков — горизонтальный скролл, закреплён сверху -->
               <div class="pack-row sticky">
                 <v-chip
                   v-for="p in emojiPacks"
@@ -76,7 +80,6 @@
                 </v-chip>
               </div>
 
-              <!-- Поиск -->
               <div class="mt-2" v-if="selectedEmojiPackId !== '__system__'">
                 <v-text-field
                   v-model="emojiSearch"
@@ -197,25 +200,6 @@
             </div>
           </v-menu>
 
-          <!-- Быстрый системный EmojiPicker -->
-          <v-menu
-            v-model="showEmojiPicker"
-            :close-on-content-click="false"
-            location="top"
-            transition="slide-y-transition"
-          >
-            <template #activator="{ props }">
-              <v-btn
-                icon="mdi-emoticon-outline"
-                size="small"
-                variant="text"
-                v-bind="props"
-                :title="'Эмодзи'"
-              />
-            </template>
-            <EmojiPicker :tooltip="true" @emoji-sent="onSelectEmoji" />
-          </v-menu>
-
           <!-- GIF -->
           <v-menu
             v-model="showGifPicker"
@@ -271,11 +255,10 @@
             color="primary"
             size="small"
             variant="flat"
-            :disabled="!inner.trim()"
+            :disabled="!innerLimited.trim()"
             @click="onSubmit"
           >
             <v-icon start size="16">mdi-send</v-icon>
-            Отправить
           </v-btn>
         </v-col>
       </v-row>
@@ -284,7 +267,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onMounted, nextTick } from "vue";
 import { EmojiPicker, GifPicker } from "vue-gif-emoji-picker";
 import type { Emoji, Gif } from "vue-gif-emoji-picker";
 import {
@@ -295,13 +278,13 @@ import {
 
 const props = defineProps<{
   modelValue: string;
-  minHeight?: number;
-  maxRows?: number;
   context?: "dm" | "channel";
   meId?: string;
   groupId?: string;
 }>();
+
 type StickerMeta = { kind: "emoji" | "sticker"; packId?: string | null };
+
 type StickerPayload = {
   dataUrl: string;
   mime: string;
@@ -318,26 +301,115 @@ const emit = defineEmits<{
   (e: "sticker", payload: StickerPayload): void;
 }>();
 
-// Внутреннее value — это строка, без .content
+const MAX_LENGTH = 5000;
+const MAX_ROWS = 10;
+
+// v-textarea model c жёстким лимитом
 const inner = computed({
   get: () => props.modelValue || "",
-  set: (v: string) => emit("update:modelValue", v),
+  set: (v: string) => emit("update:modelValue", v ?? ""),
+});
+const innerLimited = computed({
+  get: () => inner.value.slice(0, MAX_LENGTH),
+  set: (v: string) => emit("update:modelValue", (v || "").slice(0, MAX_LENGTH)),
 });
 
 const placeholder = computed(() => "Напишите сообщение...");
 
-// Refs
-const fileInput = ref<HTMLInputElement | null>(null);
+// refs
+const vta = ref(); // ссылка на v-textarea
+const textareaEl = ref<HTMLTextAreaElement | null>(null);
 
-// Reactions store / паки
+const currentRows = ref(1);
+const drawerHeight = ref(0); // фактическая высота нижнего бара
+
+// измерение и установка высоты
+function measureAndApply() {
+  if (!textareaEl.value) return;
+
+  const ta = textareaEl.value;
+  // Сброс высоты, чтобы корректно посчитать scrollHeight
+  ta.style.height = "auto";
+
+  const cs = window.getComputedStyle(ta);
+  const lineHeight = parseFloat(cs.lineHeight || "20") || 20;
+  const padTop = parseFloat(cs.paddingTop || "0") || 0;
+  const padBottom = parseFloat(cs.paddingBottom || "0") || 0;
+
+  // Сколько строк требуется по факту
+  const contentHeight = ta.scrollHeight - padTop - padBottom;
+  const neededRows = Math.max(1, Math.ceil(contentHeight / lineHeight));
+  const rows = Math.min(MAX_ROWS, neededRows);
+  currentRows.value = rows;
+
+  // Устанавливаем видимую высоту textarea ровно под строки
+  const newTaHeight = rows * lineHeight + padTop + padBottom;
+  ta.style.height = `${newTaHeight}px`;
+  ta.style.overflowY = neededRows > MAX_ROWS ? "auto" : "hidden";
+
+  // Посчитаем высоту всего нижнего бара:
+  // обёртка .wrap: padding 8 сверху и снизу => 16
+  const wrapPadding = 16;
+  // Высота ряда кнопок — как минимум 36px (кнопки small)
+  const controlsMin = 36;
+
+  const rowHeight = Math.max(newTaHeight, controlsMin);
+  drawerHeight.value = Math.ceil(rowHeight + wrapPadding);
+}
+
+// ограничение при вводе/вставке
+function onInputLimit(e: Event) {
+  const el = e.target as HTMLTextAreaElement | null;
+  if (!el) return;
+  if (el.value.length > MAX_LENGTH) {
+    el.value = el.value.slice(0, MAX_LENGTH);
+    emit("update:modelValue", el.value);
+  }
+  // после любого ввода пересчитать высоту
+  nextTick(measureAndApply);
+}
+
+function onPasteLimit(e: ClipboardEvent) {
+  const paste = e.clipboardData?.getData("text") ?? "";
+  const current = innerLimited.value || "";
+  const space = MAX_LENGTH - current.length;
+  if (space <= 0) {
+    e.preventDefault();
+    return;
+  }
+  if (paste.length > space) {
+    e.preventDefault();
+    emit("update:modelValue", current + paste.slice(0, space));
+  }
+  nextTick(measureAndApply);
+}
+
+// стартовая и последующие инициализации
+onMounted(async () => {
+  await nextTick();
+  // получаем внутренний textarea из v-textarea
+  const root = (vta.value?.$el as HTMLElement | null) || null;
+  textareaEl.value = root?.querySelector("textarea") || null;
+
+  measureAndApply();
+
+  // наблюдаем за изменением шрифта/ресайзом окна
+  const ro = new ResizeObserver(() => measureAndApply());
+  if (textareaEl.value) ro.observe(textareaEl.value);
+  window.addEventListener("resize", measureAndApply, { passive: true });
+});
+
+watch(
+  () => innerLimited.value,
+  () => nextTick(measureAndApply)
+);
+
+// Пакеты/пикеры (без изменений в логике)
 const reactions = useReactionsStore();
-
 const showEmojiPacks = ref(false);
 const showStickerPacks = ref(false);
-const showEmojiPicker = ref(false);
 const showGifPicker = ref(false);
-
-const selectedEmojiPackId = ref<string | "__system__" | null>(null);
+const selectedEmojiPackId = ref<string | "system" | null>(null);
 const selectedStickerPackId = ref<string | null>(null);
 
 const emojiPacks = computed(() =>
@@ -356,31 +428,17 @@ const stickerPacks = computed(() =>
     groupId: props.groupId,
   })
 );
-watch(
-  emojiPacks,
-  (list) => {
-    console.debug("[InputMulti] emojiPacks", {
-      meId: props.meId,
-      count: list.length,
-      ids: list.map((p) => p.id),
-    });
-  },
-  { immediate: true }
-);
 watch(showEmojiPacks, (open) => {
   if (!open) return;
-  // если ничего не выбрано — приоритет: первый доступный, затем системные
-  if (!selectedEmojiPackId.value) {
-    selectedEmojiPackId.value = emojiPacks.value[0]?.id ?? "__system__";
-  }
+  if (!selectedEmojiPackId.value)
+    selectedEmojiPackId.value = emojiPacks.value[0]?.id ?? "system";
 });
-
 watch(showStickerPacks, (open) => {
   if (!open) return;
-  if (!selectedStickerPackId.value) {
+  if (!selectedStickerPackId.value)
     selectedStickerPackId.value = stickerPacks.value[0]?.id ?? null;
-  }
 });
+
 const currentEmojiItems = ref<EmojiItem[]>([]);
 const currentStickerItems = ref<StickerItem[]>([]);
 const emojiLoading = ref(false);
@@ -391,20 +449,16 @@ const stickerSearch = ref("");
 watch(
   [selectedEmojiPackId, () => props.groupId, () => props.meId],
   async () => {
-    if (
-      !selectedEmojiPackId.value ||
-      selectedEmojiPackId.value === "__system__"
-    ) {
+    if (!selectedEmojiPackId.value || selectedEmojiPackId.value === "system") {
       currentEmojiItems.value = [];
       return;
     }
     emojiLoading.value = true;
     try {
-      const list = await reactions.getPackItems(
+      currentEmojiItems.value = (await reactions.getPackItems(
         "emoji",
         selectedEmojiPackId.value
-      );
-      currentEmojiItems.value = list as EmojiItem[];
+      )) as EmojiItem[];
     } finally {
       emojiLoading.value = false;
     }
@@ -421,29 +475,28 @@ watch(
     }
     stickerLoading.value = true;
     try {
-      const list = await reactions.getPackItems(
+      currentStickerItems.value = (await reactions.getPackItems(
         "sticker",
         selectedStickerPackId.value
-      );
-      currentStickerItems.value = list as StickerItem[];
+      )) as StickerItem[];
     } finally {
       stickerLoading.value = false;
     }
   },
   { immediate: true }
 );
+
 const filteredEmojiItems = computed(() => {
   const q = emojiSearch.value.trim().toLowerCase();
   if (!q) return currentEmojiItems.value;
   return currentEmojiItems.value.filter((it) => {
     const kw = ("keywords" in it && it.keywords) || [];
-    if (it.type === "unicode") {
+    if (it.type === "unicode")
       return [it.emoji, ...(kw || [])].some((x) =>
         String(x || "")
           .toLowerCase()
           .includes(q)
       );
-    }
     return [...(kw || [])].some((x) =>
       String(x || "")
         .toLowerCase()
@@ -451,7 +504,6 @@ const filteredEmojiItems = computed(() => {
     );
   });
 });
-
 const filteredStickerItems = computed(() => {
   const q = stickerSearch.value.trim().toLowerCase();
   if (!q) return currentStickerItems.value;
@@ -464,37 +516,40 @@ const filteredStickerItems = computed(() => {
     );
   });
 });
-// Выборы из пикеров
-function onSelectEmoji(e: Emoji) {
-  const ch = e?.emoji || "";
-  if (!ch) return;
-  inner.value = (inner.value || "") + ch;
+function focusTextarea() {
+  // сфокусируем textarea после вставки
+  const el = textareaEl.value
+  if (!el) return
+  requestAnimationFrame(() => {
+    el.focus()
+    // ставим курсор в конец
+    const len = el.value.length
+    el.setSelectionRange(len, len)
+  })
 }
-
+// Выборы
 function onSystemEmojiPick(e: Emoji) {
   const ch = e?.emoji || "";
   if (!ch) return;
-  inner.value = (inner.value || "") + ch;
-  showEmojiPacks.value = false;
-  onSubmit();
+  innerLimited.value = (innerLimited.value || "") + ch;
+  nextTick(measureAndApply);
+  focusTextarea();
 }
-
 function onEmojiItemClick(it: EmojiItem) {
   if (it.type === "unicode") {
-    inner.value = (inner.value || "") + it.emoji;
-    showEmojiPacks.value = false;
-    onSubmit();
+    innerLimited.value = (innerLimited.value || "") + it.emoji;
+    nextTick(measureAndApply);
+    focusTextarea();
   } else {
+    // стикер отправляем как раньше (если нужно менять — скажите)
     emit("sticker", {
       dataUrl: it.dataUrl,
       mime: it.mime || "image/png",
       name: "emoji.png",
       meta: { kind: "emoji", packId: selectedEmojiPackId.value },
     });
-    showEmojiPacks.value = false;
   }
 }
-
 function onStickerItemClick(it: StickerItem) {
   emit("sticker", {
     dataUrl: it.dataUrl,
@@ -505,18 +560,8 @@ function onStickerItemClick(it: StickerItem) {
   showStickerPacks.value = false;
 }
 
-// API для открытия пикеров с предвыбранным паком
-function openEmojiPicker(packId?: string) {
-  selectedEmojiPackId.value = packId || emojiPacks.value[0]?.id || "__system__";
-  showEmojiPacks.value = true;
-}
-function openStickerPicker(packId?: string) {
-  selectedStickerPackId.value = packId || stickerPacks.value[0]?.id || null;
-  showStickerPacks.value = true;
-}
-defineExpose({ openEmojiPicker, openStickerPicker });
-
 // Файлы
+const fileInput = ref<HTMLInputElement | null>(null);
 function triggerFile() {
   fileInput.value?.click();
 }
@@ -529,7 +574,7 @@ function onFilePicked(e: Event) {
 
 // Отправка
 function onSubmit() {
-  const text = inner.value.trim();
+  const text = (innerLimited.value || "").trim();
   if (!text) return;
   emit("send");
 }
@@ -538,7 +583,12 @@ function onSubmit() {
 <style scoped>
 .input-multi {
   border-top: 1px solid var(--app-border-color);
+  overflow: hidden !important;
 }
+.input-multi :deep(.v-navigation-drawer__content) {
+  overflow: hidden !important;
+}
+
 .wrap {
   padding: 8px;
 }
@@ -549,7 +599,37 @@ function onSubmit() {
   gap: 8px;
 }
 
-/* Пикеры */
+.input-field :deep(.v-field) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  min-height: auto !important;
+}
+.input-field :deep(.v-fieldoutline),
+.input-field :deep(.v-fieldoverlay) {
+  display: none !important;
+}
+.input-field :deep(.v-input__control) {
+  --v-field-border-width: 0;
+}
+
+.input-field :deep(textarea) {
+  padding: 8px 12px !important;
+  line-height: 20px !important;
+  background: transparent !important;
+  color: var(--app-on-surface) !important;
+  resize: none !important;
+  overflow-y: hidden;
+}
+
+.input-field :deep(textarea)::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.input-field :deep(textarea) {
+  scrollbar-width: none;
+}
+
 .picker {
   min-width: 360px;
   max-width: 560px;
@@ -582,7 +662,6 @@ function onSubmit() {
   grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
   gap: 6px;
 }
-
 .cell {
   width: 100%;
   aspect-ratio: 1 / 1;
