@@ -16,7 +16,6 @@ import {
 import { useRoute } from "vue-router";
 import { useGroupThemesStore } from "~/stores/groupThemes";
 
-
 // Базовая модель кастомной темы
 type CustomTheme = {
   textColor: string;
@@ -150,26 +149,33 @@ function applyAll() {
         : "classic";
 
     if (effective !== "custom") {
-      // Системные темы (6 штук)
-      applyCssVarsRaw(systemVars[effective]);
+      // системные цвета и токены Vuetify
+      applyCssVarsRaw(systemVars[effective] as Record<string, string>);
       const def = systemVuetify[effective];
       applyVuetifyColors(
         def.dark ? "dark" : "light",
-        def.colors,
+        def.colors as Record<string, string>,
         def.dark ?? false
       );
-      // Важно: переключаем на 'dark'/'light' для корректной работы Vuetify токенов
+
+      // ВАЖНО: поверх системного набора накладываем групповой override (без смены темы Vuetify),
+      // чтобы фон/картинка/оверлей/бордеры в превью групп отрабатывали.
+      const basePreset = def.dark ? PRESETS.dark : PRESETS.light;
+      const data = override.override
+        ? clampCustom({ ...basePreset, ...override.override })
+        : basePreset;
+      applyCssVars(data);
+
       return;
     }
 
-    // custom — ваша текущая логика (без изменений)
+    // Custom
     const base = clampCustom(custom.getSnapshot?.() ?? {});
     const ov = override.override ?? null;
     const merged = ov ? clampCustom({ ...base, ...ov }) : base;
-    const data = resolveTheme(merged);
-
-    applyCssVars(data);
-    applyVuetifyTheme("custom", data);
+    // здесь можно вызывать resolveTheme, но для соответствия «рабочей» версии достаточно raw CustomTheme
+    applyCssVars(merged);
+    applyVuetifyTheme("custom", merged);
   } finally {
     isApplying = false;
   }
@@ -182,7 +188,94 @@ function applyCssVarsRaw(vars: Record<string, string>) {
     root.style.setProperty(k, String(v));
   }
 }
+function applyCssVars(data: CustomTheme) {
+  const root = document.documentElement;
 
+  // Базовые
+  root.style.setProperty("--app-text-color", data.textColor);
+  root.style.setProperty("--app-card-bg", data.cardBg);
+  root.style.setProperty("--app-border-color", data.borderColor);
+
+  // Hover
+  root.style.setProperty(
+    "--app-hover-color",
+    data.hoverColor || "rgba(127,127,127,0.08)"
+  );
+
+  // Фон
+  const kind = data.bgKind;
+  const bgColor = data.bgColor ?? "transparent";
+  root.style.setProperty("--app-bg-color", bgColor);
+
+  if (kind === "gradient") {
+    const grad = data.bgGradient?.trim() || "none";
+    root.style.setProperty("--app-bg-image", grad);
+  } else if (kind === "image") {
+    const img = data.bgImage
+      ? data.bgImage.trim().startsWith("url(")
+        ? data.bgImage.trim()
+        : `url("${data.bgImage.trim()}")`
+      : "none";
+    root.style.setProperty("--app-bg-image", img);
+  } else {
+    root.style.setProperty("--app-bg-image", "none");
+  }
+
+  root.style.setProperty("--app-bg-size", String(data.bgSize || "cover"));
+  root.style.setProperty(
+    "--app-bg-repeat",
+    String(data.bgRepeat || "no-repeat")
+  );
+  root.style.setProperty(
+    "--app-bg-position",
+    String(data.bgPosition || "center")
+  );
+
+  root.style.setProperty(
+    "--app-bg-overlay-color",
+    data.overlayColor || "transparent"
+  );
+  root.style.setProperty(
+    "--app-bg-overlay-opacity",
+    String(data.overlayOpacity ?? 0)
+  );
+}
+function applyVuetifyTheme(
+  name: "light" | "dark" | "custom",
+  data: CustomTheme
+) {
+  const vuetifyTheme = vuetify; // ThemeInstance
+
+  if (name !== "custom") {
+    vuetifyTheme.change(name);
+    return;
+  }
+
+  const baseColor = data.cardBg || data.bgColor || "#121212";
+  const isDark = isDarkColor(baseColor);
+
+  vuetifyTheme.themes.value.custom = {
+    dark: isDark,
+    colors: {
+      background: data.bgColor || (isDark ? "#121212" : "#ffffff"),
+      surface: data.cardBg,
+      "on-surface": data.textColor,
+      outline: data.borderColor,
+
+      primary: data.primaryColor,
+      "surface-variant": data.surfaceVariantColor,
+
+      secondary: isDark ? "#9aa0a6" : "#6c757d",
+      error: "#ef4444",
+      info: "#60a5fa",
+      success: "#10b981",
+      warning: "#f59e0b",
+    },
+    variables: {},
+  };
+
+  vuetifyTheme.change("custom");
+}
 // Замена applyVuetifyTheme для простых light/dark из presets.ts
 function applyVuetifyColors(
   name: "light" | "dark",
@@ -367,32 +460,32 @@ function parseColor(input: string): { r: number; g: number; b: number } {
   if (s.startsWith("#")) {
     const hex = s.slice(1);
     if (hex.length === 3) {
-      const r = parseInt(hex[0] + hex[0], 16);
-      const g = parseInt(hex[1] + hex[1], 16);
-      const b = parseInt(hex[2] + hex[2], 16);
-      return { r, g, b };
+      return {
+        r: parseInt(hex[0] + hex[0], 16),
+        g: parseInt(hex[1] + hex[1], 16),
+        b: parseInt(hex[2] + hex[2], 16),
+      };
     }
     if (hex.length >= 6) {
-      const r = parseInt(hex.slice(0, 2), 16);
-      const g = parseInt(hex.slice(2, 4), 16);
-      const b = parseInt(hex.slice(4, 6), 16);
-      return { r, g, b };
+      return {
+        r: parseInt(hex.slice(0, 2), 16),
+        g: parseInt(hex.slice(2, 4), 16),
+        b: parseInt(hex.slice(4, 6), 16),
+      };
     }
   }
 
   if (s.startsWith("rgb")) {
-    const m = s.match(
-      `/rgba?<mjx-container class="MathJax CtxtMenu_Attached_0" jax="CHTML" tabindex="0" ctxtmenu_counter="4" style="font-size: 113.1%; position: relative;"><mjx-math class="MJX-TEX" aria-hidden="true"><mjx-mo class="mjx-n"><mjx-c class="mjx-c28"></mjx-c></mjx-mo><mjx-msup><mjx-mo class="mjx-n"><mjx-c class="mjx-c5B"></mjx-c></mjx-mo><mjx-script style="vertical-align: 0.363em;"><mjx-mo class="mjx-n" size="s"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-script></mjx-msup><mjx-mo class="mjx-n"><mjx-c class="mjx-c5D"></mjx-c></mjx-mo><mjx-mo class="mjx-n"><mjx-c class="mjx-c2B"></mjx-c></mjx-mo><mjx-mo class="mjx-n"><mjx-c class="mjx-c29"></mjx-c></mjx-mo></mjx-math><mjx-assistive-mml unselectable="on" display="inline"><math xmlns="http://www.w3.org/1998/Math/MathML"><mo stretchy="false">(</mo><msup><mo stretchy="false">[</mo><mo stretchy="false">)</mo></msup><mo stretchy="false">]</mo><mo>+</mo><mo stretchy="false">)</mo></math></mjx-assistive-mml></mjx-container>/`
-    );
+    const m = s.match(/rgba?$([^)]+)$/);
     if (m) {
       const parts = m[1].split(",").map((p) => p.trim());
-      const r = clamp255(Number(parts[0]));
-      const g = clamp255(Number(parts[1]));
-      const b = clamp255(Number(parts[2]));
-      return { r, g, b };
+      return {
+        r: clamp255(Number(parts[0])),
+        g: clamp255(Number(parts[1])),
+        b: clamp255(Number(parts[2])),
+      };
     }
   }
-
   return { r: 18, g: 18, b: 18 };
 }
 

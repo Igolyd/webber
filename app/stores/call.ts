@@ -18,7 +18,7 @@ type Participant = {
   avatarUrl?: string;
 };
 
-const JANUS_SERVER = "ws://31.129.110.23:8188/janus";
+const JANUS_SERVER = "ws://185.198.152.131:8188/janus";
 
 // Meta → display
 function encodeDisplay(name: string, avatarUrl?: string) {

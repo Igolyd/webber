@@ -548,8 +548,8 @@ export const systemVars: Record<SystemTheme, CssVars> = {
   clouds: blueLightVars,
   lime: greenLightVars,
   hacker: greenDarkVars,
-  white: whiteLightVuetify, // new
-  void: voidDarkVuetify, // new
+  white: whiteLightVars, // new
+  void: voidDarkVars, // new
 };
 
 // Для обратной совместимости:
