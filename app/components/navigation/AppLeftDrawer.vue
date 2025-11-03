@@ -6,6 +6,7 @@
     :temporary="isSmAndDown"
     :width="width"
     class="theme-drawer-left scope-lnav"
+    :class="{ 'lnav-has-image': lnavHasImage }"
     app
   >
     <v-card elevation="0" color="transparent" class="px-4 pt-4 pb-2">
@@ -198,7 +199,13 @@ export default defineComponent({
       activeCategoryId.value === 1 ? "Создать группу" : "Найти друга"
     );
     const cartIcon = CartIcon;
-
+    const lnavHasImage = computed(() => {
+      if (typeof window === "undefined") return false;
+      const cs = getComputedStyle(document.documentElement);
+      const img = cs.getPropertyValue("--app-bg-image").trim();
+      // если есть url(...) или gradient(...), считаем, что фон — картинка/градиент
+      return img && img !== "none";
+    });
     const createGroupsDialog = ref(false);
     const searchDialog = ref(false);
     const confirmRemoveDialog = ref(false);
@@ -297,7 +304,7 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Токены секции */
+/* Токены секции (оставляем) */
 .scope-lnav {
   --v-theme-surface: var(--lnav-background);
   --v-theme-on-surface: var(--lnav-on-surface);
@@ -305,12 +312,9 @@ export default defineComponent({
   --v-theme-surface-variant: var(--lnav-elev-1);
 }
 
-/* Коробка Drawer — рисуем общий подложечный слой через ::before */
+/* Коробка Drawer — рисуем подложечный слой тут */
 .theme-drawer-left {
   position: relative;
-  /* Базовый слой секции: свой уникальный цвет */
-  --lnav-layer: var(--lnav-background);
-
   background: transparent !important;
   color: var(
     --lnav-on-surface,
@@ -321,53 +325,28 @@ export default defineComponent({
   box-shadow: none !important;
 }
 
-/* Сам слой (не перекрывает клики) */
+/* Слой секции: цвет/тинт из --lnav-background (уже «просвечивает» при image/gradient после фикса ThemeBridge) */
 .theme-drawer-left::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--lnav-layer);
+  background: var(--lnav-background);
   pointer-events: none;
   z-index: 0;
 }
 
-/* При фон-картинке: либо полностью прозрачный слой, либо лёгкий тинт */
-.theme-drawer-left.lnav-has-image {
-  /* Выберите один вариант: прозрачный… */
-  --lnav-layer: transparent;
-
-  /* …или нежный тинт (раскомментируйте и закомментируйте transparent выше)
-  --lnav-layer: color-mix(in oklab, var(--lnav-background) 22%, transparent);
-  */
-}
-
 /* Контент Drawer — прозрачный и выше слоя */
-.theme-drawer-left :deep(.v-navigation-drawer__content) {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: transparent !important;
-  color: var(--lnav-on-surface);
-}
-
-/* Карточки — тоже прозрачные и выше слоя */
+.theme-drawer-left :deep(.v-navigation-drawer__content),
 .theme-drawer-left :deep(.v-card),
-.theme-drawer-left :deep(.v-navigation-drawer__append) {
+.theme-drawer-left :deep(.v-navigation-drawer__append),
+:deep(.v-list) {
   position: relative;
   z-index: 1;
   background: transparent !important;
   color: var(--lnav-on-surface);
 }
 
-/* Список — прозрачный */
-:deep(.v-list) {
-  background: transparent !important;
-  color: var(--lnav-on-surface);
-}
-
-/* Ховер — как был */
+/* Hover и прочее — как было */
 :deep(.v-list-item:hover) {
   background: color-mix(
     in oklab,
@@ -375,8 +354,6 @@ export default defineComponent({
     transparent
   ) !important;
 }
-
-/* Прочее — без изменений */
 .toolbar-header {
   display: flex;
   flex-direction: column;

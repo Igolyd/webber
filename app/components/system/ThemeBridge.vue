@@ -187,7 +187,12 @@ function applyCssVarsRaw(vars: Record<string, string>) {
 // Применение только базовых переменных (фон, текст, кнопки) — без секций
 function applyBgAndBasicVars(data: Required<CustomTheme>) {
   const root = document.documentElement;
-
+  const isBackdrop = data.bgKind === "image" || data.bgKind === "gradient";
+  document.documentElement.classList.toggle("app-has-image", isBackdrop);
+  document.documentElement.style.setProperty(
+    "--app-has-image",
+    isBackdrop ? "1" : "0"
+  );
   root.style.setProperty("--app-text-color", data.textColor);
   root.style.setProperty("--app-card-bg", data.cardBg);
   root.style.setProperty("--app-border-color", data.borderColor);
@@ -258,7 +263,13 @@ function applyBgAndBasicVars(data: Required<CustomTheme>) {
 function applySectionBackdropAndOverrides(data: Required<CustomTheme>) {
   const root = document.documentElement;
   const cs = getComputedStyle(root);
-
+  const mapSurfVar = (key: string) => {
+    if (key === "lnav") return "--lnav-background";
+    if (key === "main") return "--main-background";
+    if (key === "topnav") return "--topnav-background";
+    // для остальных секций остаётся surface
+    return `--${key}-surface`;
+  };
   const isBackdrop = data.bgKind === "image" || data.bgKind === "gradient";
 
   // Небольшой хелпер: вернуть микс дефолтной поверхности с прозрачностью
@@ -282,7 +293,7 @@ function applySectionBackdropAndOverrides(data: Required<CustomTheme>) {
   ] as const;
 
   for (const key of sectionKeys) {
-    const surfVar = `--${key}-surface`;
+    const surfVar = mapSurfVar(key); // было: `--${key}-surface`
     const onVar = `--${key}-on-surface`;
     const borderVar = `--${key}-border`;
     const hoverVar = key === "dialog" || key === "menu" ? "" : `--${key}-hover`;

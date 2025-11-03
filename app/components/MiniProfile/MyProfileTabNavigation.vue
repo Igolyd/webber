@@ -406,12 +406,12 @@ export default defineComponent({
   color: var(--lnav-on-surface);
 }
 
-/* Подложка мини-профиля повторяет слой секции левой навигации */
 .my-profile-wrapper::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--lnav-layer, var(--lnav-background, transparent));
+  /* тот же слой, что у Drawer */
+  background: var(--lnav-background);
   z-index: 0;
 }
 
