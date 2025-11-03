@@ -44,7 +44,8 @@ export default defineNuxtConfig({
   },
   css: [
         '@formkit/themes/genesis', // базовая тема FormKit
-         '~/assets/css/theme-vars.css',
+         '~/assets/styles/theme-buttons.css',
+         '~/assets/styles/sections.css',
   ],
 
   vuetify: {

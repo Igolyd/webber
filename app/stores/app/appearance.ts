@@ -10,13 +10,12 @@ export const useAppearanceStore = defineStore('appearance', () => {
   const theme = useLocalStorage<Theme>('app.theme', 'classic')
   const preferPersonalThemeInGroups = useLocalStorage<boolean>('app.preferPersonalThemeInGroups', false)
 
-const normalizedTheme = computed<SystemTheme | 'custom'>(() => {
+  const normalizedTheme = computed<SystemTheme | 'custom'>(() => {
+    if (theme.value === 'light') return 'sakura'
+    if (theme.value === 'dark') return 'classic'
+    return theme.value as SystemTheme | 'custom'
+  })
 
-if (theme.value === 'light') return 'sakura'
-if (theme.value === 'dark') return 'classic'
-return theme.value as SystemTheme | 'custom'
-  
-})
   function setTheme(t: Theme) { theme.value = t }
   function setPreferPersonalThemeInGroups(v: boolean) { preferPersonalThemeInGroups.value = v }
 

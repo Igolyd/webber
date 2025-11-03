@@ -107,14 +107,17 @@ export default {
   top: 0;
   background: color-mix(
     in oklab,
-    var(--app-surface-2) 85%,
+    var(--lnav-background) 85%,
     transparent
   ) !important;
   backdrop-filter: blur(6px);
-  border-right: 1px solid var(--app-divider);
+  color: var(--lnav-on-surface);
+  border-right: 1px solid var(--lnav-border);
+  border-top: 1px solid var(--lnav-border);
+  box-shadow: none !important;
 }
 .settings-panel :deep(.v-list-item:hover) {
-  background: var(--app-hover-color);
+  background: var(--app-hover-color) !important;
 }
 .settings-panel :deep(.v-list-subheader) {
   color: var(--app-on-surface-variant);

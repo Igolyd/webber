@@ -4,6 +4,7 @@
       <v-card
         v-bind="hoverProps"
         elevation="8"
+        color="transparent"
         class="my-profile-container w-100"
         :style="profileBadgeStyle(isHovering)"
       >
@@ -32,7 +33,11 @@
                     <!-- Оставляем компактный аватар, BannerAvatar в мини-виде тяжёлый.
                          Баннер полноценно показываем в карточках (напр., GroupMemberProfileCard) -->
                     <v-avatar :size="avatarSize" :rounded="99999">
-                      <v-img :src="profiles.avatar || defaultAvatar" cover eager />
+                      <v-img
+                        :src="profiles.avatar || defaultAvatar"
+                        cover
+                        eager
+                      />
                     </v-avatar>
                     <span
                       class="mini-status-dot"
@@ -63,10 +68,12 @@
               <!-- Микрофон -->
               <div class="activator-wrap">
                 <v-btn
-                  variant="tonal"
-                  :color="
-                    settings.microphoneEnabled ? 'primary' : 'surface-variant'
+                  :class="
+                    settings.microphoneEnabled
+                      ? 'btn-primary-tonal'
+                      : 'btn-surface-variant'
                   "
+                  variant="text"
                   :icon="
                     settings.microphoneEnabled
                       ? 'mdi-microphone'
@@ -106,8 +113,12 @@
               <!-- Динамики -->
               <div class="activator-wrap">
                 <v-btn
-                  variant="tonal"
-                  :color="settings.audioEnabled ? 'primary' : 'surface-variant'"
+                  :class="
+                    settings.audioEnabled
+                      ? 'btn-primary-tonal'
+                      : 'btn-surface-variant'
+                  "
+                  variant="text"
                   :icon="
                     settings.audioEnabled ? 'mdi-volume-high' : 'mdi-volume-off'
                   "
@@ -160,7 +171,7 @@
             <v-card-text class="py-2">
               <div class="d-flex align-center ga-2 flex-wrap">
                 <v-btn
-                  variant="outlined"
+                  variant="text"
                   color="error"
                   prepend-icon="mdi-phone-hangup"
                   :density="btnDensity"
@@ -172,10 +183,12 @@
                 <!-- Камера -->
                 <div class="activator-wrap">
                   <v-btn
-                    variant="tonal"
-                    :color="
-                      settings.videoEnabled ? 'primary' : 'surface-variant'
+                    :class="
+                      settings.videoEnabled
+                        ? 'btn-primary-tonal'
+                        : 'btn-surface-variant'
                     "
+                    variant="text"
                     :prepend-icon="
                       settings.videoEnabled ? 'mdi-video' : 'mdi-video-off'
                     "
@@ -215,7 +228,7 @@
                 <!-- Трансляция -->
                 <div class="activator-wrap">
                   <v-btn
-                    variant="tonal"
+                    variant="text"
                     :color="
                       call.localVideoKind === 'screenshare'
                         ? 'primary'
@@ -382,11 +395,47 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.cursor-pointer { cursor: pointer; }
-.my-profile-menu {}
+.cursor-pointer {
+  cursor: pointer;
+}
+.my-profile-menu {
+}
+.my-profile-wrapper {
+  position: relative;
+  background: transparent !important;
+  color: var(--lnav-on-surface);
+}
 
+/* Подложка мини-профиля повторяет слой секции левой навигации */
+.my-profile-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--lnav-layer, var(--lnav-background, transparent));
+  z-index: 0;
+}
 
-.avatar-cell { position: relative; display: inline-block; line-height: 0; }
+.my-profile-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+/* Если используешь флаг для картинки — можно продублировать отключение, но теперь не обязательно */
+.theme-drawer-left.lnav-has-image :deep(.my-profile-wrapper)::before {
+  /* Можно скрыть полностью, если --lnav-layer даёт тинт, а тут не нужен */
+  /* display: none; */
+}
+
+/* Когда у родителя включён режим фон-картинки — убираем подложку, чтобы картинка была видна */
+.theme-drawer-left.lnav-has-image :deep(.my-profile-wrapper)::before {
+  display: none;
+}
+.avatar-cell {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
 .mini-status-dot {
   position: absolute;
   right: -2px;
@@ -395,11 +444,20 @@ export default defineComponent({
   height: 12px;
   border: 2px solid #1f1f1f;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(0,0,0,.18);
-  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
-.st-online { background: #3fb950; }
-.st-idle { background: #f2c94c; }
-.st-dnd { background: #f44336; }
-.st-invisible { background: #9aa0a6; }
+.st-online {
+  background: #3fb950;
+}
+.st-idle {
+  background: #f2c94c;
+}
+.st-dnd {
+  background: #f44336;
+}
+.st-invisible {
+  background: #9aa0a6;
+}
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-window">
+  <div class="chat-window scope-main">
     <div v-if="pinnedList.length" class="pinned-bar">
       <v-icon class="mr-1" size="18">mdi-pin</v-icon>
       Закреплённые: {{ pinnedList.length }}
@@ -272,7 +272,11 @@
                 </div>
 
                 <div class="mt-2 d-flex gap-2">
-                  <v-btn size="small" color="primary" @click="confirmEdit(m)"
+                  <v-btn
+                    size="small"
+                    class="btn-primary-tonal"
+                    variant="tonal"
+                    @click="confirmEdit(m)"
                     >Сохранить</v-btn
                   >
                   <v-btn size="small" variant="text" @click="cancelEdit"
@@ -1361,6 +1365,19 @@ function onCopiedFromPreview() {
 </script>
 
 <style scoped>
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+}
+.pinned-bar {
+  background: var(--main-elev-1, var(--main-background));
+  border-bottom: 1px solid var(--main-border, var(--app-outline-variant));
+}
+.messages-scroll {
+  background: transparent;
+}
 .chat-window {
   display: flex;
   flex-direction: column;

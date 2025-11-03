@@ -6,6 +6,26 @@ import type { CssVars } from "../../../theme/presets";
 
 export type BgKind = "color" | "gradient" | "image";
 
+type SectionKey =
+  | "hdr"
+  | "lnav"
+  | "main"
+  | "rnav"
+  | "topnav"
+  | "composer"
+  | "dialog"
+  | "menu"
+  | "mymini"; // NEW
+type SectionOverride = Partial<{
+  enabled: boolean;
+  surface: string;
+  onSurface: string;
+  border: string;
+  hover: string;
+  elev1: string;
+}>;
+type SectionsMap = Partial<Record<SectionKey, SectionOverride>>;
+
 export interface CustomThemeSnapshot {
   textColor: string;
   bgKind: BgKind;
@@ -19,10 +39,11 @@ export interface CustomThemeSnapshot {
   overlayOpacity: number;
   cardBg: string;
   borderColor: string;
-  // NEW
   hoverColor: string;
   primaryColor: string;
   surfaceVariantColor: string;
+  // NEW: секционные overrides
+  sections: SectionsMap;
 }
 
 export const useCustomThemeStore = defineStore("customTheme", () => {
@@ -40,11 +61,15 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
   const cardBg = ref<string>("#232323");
   const borderColor = ref<string>("#2c2c2c");
 
-  // NEW
   const hoverColor = ref<string>("rgba(255,255,255,0.08)");
   const primaryColor = ref<string>("#4f9cf9");
   const surfaceVariantColor = ref<string>("#3a3a3a");
-  // NEW fields (добавить рядом с existing)
+  const surfaceAlpha = ref<number>(0.85); // непрозрачность для backdrop при image/gradient
+
+  // секционные overrides
+  const sections = ref<SectionsMap>({});
+
+  // Кнопки (оставляем как есть)
   const onSurface = ref<string>("#E2DCF4");
   const onSurfaceVariant = ref<string>("#C4BCD9");
   const surface = ref<string>("#201833");
@@ -63,17 +88,12 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
     "color-mix(in oklab, #A896E6 60%, transparent)"
   );
 
-  // Buttons
   const btnPrimaryBg = ref<string>("#A896E6");
   const btnPrimaryColor = ref<string>("#1A132E");
   const btnTonalBg = ref<string>("#37304F");
   const btnTonalColor = ref<string>("#E2DCF4");
   const btnOutlineBorder = ref<string>("#5A4E75");
   const btnOutlineHover = ref<string>("rgba(168,150,230,0.10)");
-  const persisted = useLocalStorage<CustomThemeSnapshot>(
-    "app-theme-custom",
-    getSnapshot()
-  );
 
   function getSnapshot(): CustomThemeSnapshot {
     return {
@@ -92,6 +112,7 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
       hoverColor: hoverColor.value,
       primaryColor: primaryColor.value,
       surfaceVariantColor: surfaceVariantColor.value,
+      sections: sections.value || {},
     };
   }
 
@@ -114,8 +135,13 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
     if (s.primaryColor !== undefined) primaryColor.value = s.primaryColor;
     if (s.surfaceVariantColor !== undefined)
       surfaceVariantColor.value = s.surfaceVariantColor;
+    if (s.sections !== undefined) sections.value = { ...s.sections };
   }
 
+  const persisted = useLocalStorage<CustomThemeSnapshot>(
+    "app-theme-custom",
+    getSnapshot()
+  );
   if (import.meta.client) load();
 
   watch(
@@ -135,6 +161,7 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
       hoverColor,
       primaryColor,
       surfaceVariantColor,
+      sections,
     ],
     () => {
       persisted.value = getSnapshot();
@@ -143,28 +170,74 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
   );
 
   const cssVars = computed<CssVars>(() => {
+    // surface backdrop (просвет для image/gradient)
+    const a = Math.round((surfaceAlpha.value ?? 0.85) * 100);
+    const makeBackdrop = () => {
+      if (bgKind.value === "image" || bgKind.value === "gradient") {
+        return `color-mix(in oklab, ${surface.value} ${a}%, transparent)`;
+      }
+      return surface.value;
+    };
     const image =
       bgKind.value === "image" && bgImage.value
         ? bgImage.value.trim().startsWith("url(")
           ? bgImage.value.trim()
           : `url("${bgImage.value.trim()}")`
+        : bgKind.value === "gradient"
+        ? bgGradient.value
         : "none";
     const baseBgColor = bgKind.value === "color" ? bgColor.value : "#0000";
 
-    return {
+    // Базовые секционные «дефолты»
+    const baseSurface = surface.value;
+    const baseOnSurface = textColor.value;
+    const baseBorder = borderColor.value;
+    const baseHover = hoverColor.value;
+    const baseElev1 = surface2.value;
+
+    // helper pick
+    const pick = (
+      sec: SectionOverride | undefined,
+      key: keyof SectionOverride,
+      def: string
+    ): string => {
+      const v = sec?.[key];
+      return typeof v === "string" && v ? v : def;
+    };
+
+    const S = sections.value || {};
+    // surface для секций: backdrop если image/gradient (кроме dialog/menu — их делаем непрозрачными)
+    const secSurf = (def: string) =>
+      bgKind.value === "image" || bgKind.value === "gradient"
+        ? `color-mix(in oklab, ${def} ${a}%, transparent)`
+        : def;
+
+    // Секции
+    const hdr = S.hdr?.enabled ? S.hdr : undefined;
+    const lnav = S.lnav?.enabled ? S.lnav : undefined;
+    const main = S.main?.enabled ? S.main : undefined;
+    const rnav = S.rnav?.enabled ? S.rnav : undefined;
+    const topnav = S.topnav?.enabled ? S.topnav : undefined;
+    const composer = S.composer?.enabled ? S.composer : undefined;
+    const dialog = S.dialog?.enabled ? S.dialog : undefined;
+    const menu = S.menu?.enabled ? S.menu : undefined;
+    const mymini = S.mymini?.enabled ? S.mymini : undefined;
+    const vars: CssVars = {
       "--app-text-color": textColor.value,
       "--app-bg-color": baseBgColor,
       "--app-card-bg": cardBg.value,
       "--app-border-color": borderColor.value,
-      "--app-bg-image": bgKind.value === "gradient" ? bgGradient.value : image,
+      "--app-bg-image": image,
       "--app-bg-size": bgSize.value,
       "--app-bg-position": bgPosition.value,
       "--app-bg-repeat": bgRepeat.value,
       "--app-bg-overlay-color": overlayColor.value,
       "--app-bg-overlay-opacity": String(overlayOpacity.value),
-      // NEW
+
       "--app-hover-color": hoverColor.value,
+
       "--app-surface": surface.value,
+      "--app-surface-backdrop": makeBackdrop(),
       "--app-surface-2": surface2.value,
       "--app-surface-3": surface3.value,
       "--app-surface-variant": surfaceVariant.value,
@@ -187,7 +260,61 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
       "--btn-tonal-color": btnTonalColor.value,
       "--btn-outline-border": btnOutlineBorder.value,
       "--btn-outline-hover": btnOutlineHover.value,
-    };
+
+      // Секции (поверхности/тексты/границы/hover/elev-1)
+      "--hdr-surface": secSurf(pick(hdr, "surface", baseSurface)),
+      "--hdr-on-surface": pick(hdr, "onSurface", baseOnSurface),
+      "--hdr-border": pick(hdr, "border", baseBorder),
+      "--hdr-hover": pick(hdr, "hover", baseHover),
+      "--hdr-elev-1": pick(hdr, "elev1", baseElev1),
+
+      "--lnav-background": secSurf(pick(lnav, "surface", baseSurface)),
+      "--lnav-on-surface": pick(lnav, "onSurface", baseOnSurface),
+      "--lnav-border": pick(lnav, "border", baseBorder),
+      "--lnav-hover": pick(lnav, "hover", baseHover),
+      "--lnav-elev-1": pick(lnav, "elev1", baseElev1),
+
+      "--main-background": secSurf(pick(main, "surface", baseSurface)),
+      "--main-on-surface": pick(main, "onSurface", baseOnSurface),
+      "--main-border": pick(main, "border", baseBorder),
+      "--main-hover": pick(main, "hover", baseHover),
+      "--main-elev-1": pick(main, "elev1", baseElev1),
+
+      "--rnav-surface": secSurf(pick(rnav, "surface", baseSurface)),
+      "--rnav-on-surface": pick(rnav, "onSurface", baseOnSurface),
+      "--rnav-border": pick(rnav, "border", baseBorder),
+      "--rnav-hover": pick(rnav, "hover", baseHover),
+      "--rnav-elev-1": pick(rnav, "elev1", baseElev1),
+
+      "--topnav-background": secSurf(pick(topnav, "surface", surface2.value)),
+      "--topnav-on-surface": pick(topnav, "onSurface", baseOnSurface),
+      "--topnav-border": pick(topnav, "border", borderColor.value),
+      "--topnav-hover": pick(topnav, "hover", baseHover),
+      "--topnav-elev-1": pick(topnav, "elev1", baseElev1),
+
+      "--composer-surface": secSurf(pick(composer, "surface", baseSurface)),
+      "--composer-on-surface": pick(composer, "onSurface", baseOnSurface),
+      "--composer-border": pick(composer, "border", baseBorder),
+      "--composer-hover": pick(composer, "hover", baseHover),
+      "--composer-elev-1": pick(composer, "elev1", baseElev1),
+
+      // Dialog/Menu — НЕ просвечиваем (читаемость)
+      "--dialog-surface": pick(dialog, "surface", surface3.value),
+      "--dialog-on-surface": pick(dialog, "onSurface", baseOnSurface),
+      "--dialog-border": pick(dialog, "border", baseBorder),
+
+      "--menu-surface": pick(menu, "surface", surface2.value),
+      "--menu-on-surface": pick(menu, "onSurface", baseOnSurface),
+      "--menu-border": pick(menu, "border", baseBorder),
+      // NEW: Мой мини профиль (можно просвечивать при image/gradient)
+      "--mymini-surface": secSurf(pick(mymini, "surface", baseSurface)),
+      "--mymini-on-surface": pick(mymini, "onSurface", baseOnSurface),
+      "--mymini-border": pick(mymini, "border", baseBorder),
+      "--mymini-hover": pick(mymini, "hover", baseHover),
+      "--mymini-elev-1": pick(mymini, "elev1", baseElev1),
+    } as CssVars;
+
+    return vars;
   });
 
   return {
@@ -207,6 +334,7 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
     hoverColor,
     primaryColor,
     surfaceVariantColor,
+    sections,
     // computed
     cssVars,
     // io

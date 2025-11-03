@@ -1,5 +1,9 @@
 <template>
-  <v-menu location="bottom end" transition="fade-transition">
+  <v-menu
+    location="bottom end"
+    transition="fade-transition"
+    content-class="menu-scope"
+  >
     <template #activator="{ props }">
       <v-btn
         icon
@@ -11,9 +15,7 @@
         <v-icon>mdi-dots-vertical</v-icon>
       </v-btn>
     </template>
-
     <v-list density="compact">
-      
       <v-list-item @click="$emit('open-group-settings')">
         <template #prepend><v-icon>mdi-cog-outline</v-icon></template>
         <v-list-item-title>Настройки группы</v-list-item-title>
@@ -42,7 +44,9 @@
       </v-list-item>
 
       <v-list-item @click="$emit('publish-news')">
-        <template #prepend><v-icon>mdi-newspaper-variant-outline</v-icon></template>
+        <template #prepend
+          ><v-icon>mdi-newspaper-variant-outline</v-icon></template
+        >
         <v-list-item-title>Опубликовать новость</v-list-item-title>
       </v-list-item>
 
@@ -73,3 +77,17 @@ defineEmits([
   "open-privacy-settings",
 ]);
 </script>
+<style scoped>
+/* content-class — НЕ scoped селектор. Добавим :global */
+:global(.menu-scope) {
+  --v-theme-surface: var(--menu-surface);
+  --v-theme-on-surface: var(--menu-on-surface);
+  --v-theme-outline: var(--menu-border);
+  --v-theme-surface-variant: var(--menu-elev-1);
+  background: var(--menu-surface, var(--app-surface));
+  color: var(--menu-on-surface, var(--app-on-surface));
+  border: 1px solid var(--menu-border, var(--app-outline-variant));
+  border-radius: 10px;
+  overflow: hidden;
+}
+</style>

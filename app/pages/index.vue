@@ -10,8 +10,6 @@
     />
 
     <div class="content-area">
-
-
       <section class="content-scroll">
         <v-card flat class="list-card">
           <template v-if="activeCategoryId === 1">
@@ -30,27 +28,28 @@
       :temporary="isSmAndDown"
       :width="320"
     />
-          <ContentHeader
-        :title="activeCategoryName"
-        :plusTitle="currentTitle"
-        :showSearch="true"
-        :showPlus="true"
-        @open-left="leftDrawer = true"
-        @plus="triggerPlus"
-        @search="openSearch"
-      >
-        <template #right-before>
-          <v-btn
-            v-if="isSmAndDown"
-            icon
-            variant="text"
-            :title="'Друзья в сети'"
-            @click="rightDrawer = true"
-          >
-            <v-icon>mdi-account-multiple</v-icon>
-          </v-btn>
-        </template>
-      </ContentHeader>
+
+    <ContentHeader
+      :title="activeCategoryName"
+      :plusTitle="currentTitle"
+      :showSearch="true"
+      :showPlus="true"
+      @open-left="leftDrawer = true"
+      @plus="triggerPlus"
+      @search="openSearch"
+    >
+      <template #right-before>
+        <v-btn
+          v-if="isSmAndDown"
+          icon
+          variant="text"
+          :title="'Друзья в сети'"
+          @click="rightDrawer = true"
+        >
+          <v-icon>mdi-account-multiple</v-icon>
+        </v-btn>
+      </template>
+    </ContentHeader>
   </v-container>
 </template>
 
@@ -98,18 +97,11 @@ export default defineComponent({
     const triggerPlus = () => {
       leftDrawerRef.value?.triggerCategoryAction();
     };
-
     const openSearch = () => {
-      // чтобы не дублировать состояние, делегируем Drawer-у
-      if (activeCategoryId.value === 2) {
+      if (activeCategoryId.value === 2)
         leftDrawerRef.value?.triggerCategoryAction();
-      } else {
-        // в режиме "Группы" кнопка "лупа" может быть просто заглушкой или
-        // открывать доп. поиск — опционально. Сейчас делегируем в Drawer.
-        leftDrawerRef.value?.triggerCategoryAction();
-      }
+      else leftDrawerRef.value?.triggerCategoryAction();
     };
-
     const onOpenFromList = () => {
       if (isSmAndDown.value) leftDrawer.value = false;
     };
@@ -134,37 +126,46 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.h-100 {
-  height: 100%;
-}
+.h-100 { height: 100%; }
 
-/* Внутренняя поверхность */
+/* Скоуп main + прозрачная поверхность */
 .content-area {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: transparent;
+  box-shadow: none !important;
+
+  /* Скоуп секции main для наследования цветов */
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+
+  /* Полностью прозрачный фон */
+  background: transparent !important;
+  color: var(--main-on-surface);
 }
 
 .content-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
-  
+  background: transparent !important;
 }
 
+/* Карточка-обёртка — тоже прозрачная */
 .list-card {
-  background: var(--app-surface);
-  color: var(--app-on-surface);
-  border: 1px solid var(--app-outline-variant);
-  border-radius: 0;
+  background: transparent !important;
+  color: var(--main-on-surface);
+  border: 1px solid var(--main-border);
+  border-left: none;
   height: 100%;
   overflow: auto;
-  padding: 0%;
+  padding: 0;
 }
-.content-scroll {
-  /* padding: 12px; */
-}
+
+/* скрытый скролл у списка */
+.list-card::-webkit-scrollbar { width: 0; height: 0; }
+.list-card { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 </style>

@@ -5,9 +5,10 @@
     :permanent="!isSmAndDown"
     :temporary="isSmAndDown"
     :width="width"
-    class="theme-drawer-left"
+    class="theme-drawer-left scope-lnav"
+    app
   >
-    <div class="px-4 pt-4 pb-2">
+    <v-card elevation="0" color="transparent" class="px-4 pt-4 pb-2">
       <div class="toolbar-header">
         <div
           class="nav-item"
@@ -16,17 +17,23 @@
           <v-icon
             size="24"
             class="mr-2"
-            :icon="isGroupsActive ? 'mdi-forum-outline' : 'mdi-account-group-outline'"
+            :icon="
+              isGroupsActive ? 'mdi-forum-outline' : 'mdi-account-group-outline'
+            "
             :title="categorySwitchLabel"
           />
           <span>{{ categorySwitchLabel }}</span>
         </div>
-        <!-- Действие в зависимости от категории: две иконки, активная подсвечена -->
+
         <div class="nav-item" @click="triggerCategoryAction">
           <v-icon
             size="24"
             class="mr-2"
-            :icon="isGroupsActive ? 'mdi-creation-outline' : 'mdi-account-search-outline'"
+            :icon="
+              isGroupsActive
+                ? 'mdi-creation-outline'
+                : 'mdi-account-search-outline'
+            "
             :title="currentTitle"
           />
           <span>{{ currentTitle }}</span>
@@ -40,25 +47,15 @@
         </NuxtLink>
       </div>
 
-      <v-divider class="my-2" />
+      <v-divider class="my-2">
+        <div class="d-flex align-center px-1">
+          <h5 class="text-subtitle-1 mb-0">{{ activeCategoryName }}</h5>
+          <v-spacer />
+        </div>
+      </v-divider>
+    </v-card>
 
-      <div class="d-flex align-center px-1">
-        <h5 class="text-subtitle-1 mb-0">{{ activeCategoryName }}</h5>
-        <v-spacer />
-        <v-btn
-          size="small"
-          variant="text"
-          icon
-          :title="currentTitle"
-          @click="triggerCategoryAction"
-        >
-          <v-icon>mdi-plus</v-icon>
-        </v-btn>
-      </div>
-    </div>
-
-    <v-list density="comfortable" class="py-0">
-      <!-- Группы -->
+    <v-list density="comfortable" class="py-0" color="transparent">
       <template v-if="activeCategoryId === 1">
         <NuxtLink
           v-for="group in groupsStore.groups"
@@ -77,7 +74,6 @@
         </NuxtLink>
       </template>
 
-      <!-- Личные сообщения -->
       <template v-else>
         <v-hover
           v-for="friend in myFriends"
@@ -93,13 +89,14 @@
           >
             <template #prepend>
               <v-avatar size="32">
-                <!-- GIF поддерживаются v-img по умолчанию -->
                 <v-img :src="friend.avatar || '/avatars/default.jpg'" alt="" />
               </v-avatar>
             </template>
             <v-list-item-title>{{ friend.name }}</v-list-item-title>
             <template #append>
-              <v-icon v-if="friend.online" color="green" size="14">mdi-circle</v-icon>
+              <v-icon v-if="friend.online" color="green" size="14"
+                >mdi-circle</v-icon
+              >
             </template>
           </v-list-item>
         </v-hover>
@@ -107,27 +104,27 @@
     </v-list>
 
     <template #append>
-      <MyProfileTabNavigation class="px-2 pb-2 w-100" />
+      <MyProfileTabNavigation class="px-2 pb-2" />
     </template>
 
-    <!-- Диалог создания группы -->
     <CreateGroups
       v-model="createGroupsDialog"
       @created="onGroupCreated"
       @cancel="createGroupsDialog = false"
     />
-    <!-- Диалог поиска пользователей -->
     <UserSearchDialog v-model="searchDialog" />
-    <!-- Подтверждение удаления друга -->
     <v-dialog v-model="confirmRemoveDialog" max-width="420">
       <v-card>
         <v-card-title>Удалить из друзей?</v-card-title>
-        <v-card-text>
-          Вы уверены, что хотите удалить этого пользователя из списка друзей?
-        </v-card-text>
+        <v-card-text
+          >Вы уверены, что хотите удалить этого пользователя из списка
+          друзей?</v-card-text
+        >
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="confirmRemoveDialog = false">Отмена</v-btn>
+          <v-btn variant="text" @click="confirmRemoveDialog = false"
+            >Отмена</v-btn
+          >
           <v-btn color="error" @click="confirmRemoveFriend">Удалить</v-btn>
         </v-card-actions>
       </v-card>
@@ -146,21 +143,15 @@ import { useGroupsStore } from "~/stores/groups";
 import { useUsersStore } from "~/stores/users";
 import { useUserAccountStore } from "@/stores/user/account";
 
-// assets
 import CartIcon from "@/assets/ui/Cart.png";
 import groupExample from "@/assets/profile/group_example.jpg";
 
 export default defineComponent({
   name: "AppLeftDrawer",
-  components: {
-    MyProfileTabNavigation,
-    CreateGroups,
-    UserSearchDialog,
-  },
+  components: { MyProfileTabNavigation, CreateGroups, UserSearchDialog },
   props: {
     modelValue: { type: Boolean, required: true },
     width: { type: [Number, String], default: 360 },
-    // двусторонняя синхронизация активной категории и её имени (для хедера в центре)
     categoryId: { type: Number, default: 1 },
     categoryName: { type: String, default: "Группы" },
   },
@@ -192,25 +183,20 @@ export default defineComponent({
         }
       }
     );
-
     watch(activeCategoryId, (v) => {
       emit("update:categoryId", v);
       emit("update:categoryName", v === 1 ? "Группы" : "Личные сообщения");
     });
 
     const isGroupsActive = computed(() => activeCategoryId.value === 1);
-
     const myFriends = computed(() => usersStore.myFriends);
     const defaultGroupAvatar = groupExample;
-
     const categorySwitchLabel = computed(() =>
       activeCategoryId.value === 1 ? "Личные сообщения" : "Группы"
     );
-
     const currentTitle = computed(() =>
       activeCategoryId.value === 1 ? "Создать группу" : "Найти друга"
     );
-
     const cartIcon = CartIcon;
 
     const createGroupsDialog = ref(false);
@@ -221,48 +207,18 @@ export default defineComponent({
     const onGroupCreated = () => {
       createGroupsDialog.value = false;
     };
-
     const switchCategory = (id: number) => {
       activeCategoryId.value = id;
       activeCategoryName.value = id === 1 ? "Группы" : "Личные сообщения";
     };
-
     const closeOnMobile = () => {
       if (isSmAndDown.value) localOpen.value = false;
     };
-
     const openChat = (friendId: string) => {
       router.push(`/dm/${friendId}`);
       closeOnMobile();
     };
 
-    const openRemoveFriendByContext = (friendId: string) => {
-      friendToRemove.value = friendId;
-      confirmRemoveDialog.value = true;
-    };
-
-    const confirmRemoveFriend = () => {
-      if (friendToRemove.value && account.userId) {
-        usersStore.removeFriend(account.userId, friendToRemove.value, true);
-      }
-      confirmRemoveDialog.value = false;
-      friendToRemove.value = null;
-    };
-
-    // действие “+”
-    const triggerCategoryAction = () => {
-      if (activeCategoryId.value === 1) {
-        createGroupsDialog.value = true;
-      } else {
-        searchDialog.value = true;
-      }
-    };
-
-    const visitStore = () => {
-      console.log("Visit store");
-    };
-
-    // ===== Hover-баннер для друзей (только на наведении) =====
     function isGradientLike(v?: string) {
       if (!v) return false;
       const s = v.toLowerCase().trim();
@@ -272,7 +228,9 @@ export default defineComponent({
       const style: Record<string, string> = {
         transition:
           "filter .18s ease, background .18s ease, background-color .18s ease, border-radius .18s ease",
-        filter: isHovering ? "none" : "opacity(0.85) saturate(0.98) brightness(0.98)",
+        filter: isHovering
+          ? "none"
+          : "opacity(0.85) saturate(0.98) brightness(0.98)",
         borderRadius: "12px",
         overflow: "hidden",
       };
@@ -283,6 +241,23 @@ export default defineComponent({
       }
       return style;
     }
+
+    const openRemoveFriendByContext = (friendId: string) => {
+      friendToRemove.value = friendId;
+      confirmRemoveDialog.value = true;
+    };
+    const confirmRemoveFriend = () => {
+      if (friendToRemove.value && account.userId) {
+        usersStore.removeFriend(account.userId, friendToRemove.value, true);
+      }
+      confirmRemoveDialog.value = false;
+      friendToRemove.value = null;
+    };
+
+    const triggerCategoryAction = () => {
+      if (activeCategoryId.value === 1) createGroupsDialog.value = true;
+      else searchDialog.value = true;
+    };
 
     expose({
       triggerCategoryAction,
@@ -304,21 +279,17 @@ export default defineComponent({
       currentTitle,
       cartIcon,
       defaultGroupAvatar,
-      // dialogs
       createGroupsDialog,
       searchDialog,
       confirmRemoveDialog,
       friendToRemove,
-      // actions
       triggerCategoryAction,
       switchCategory,
       onGroupCreated,
       openChat,
       openRemoveFriendByContext,
       confirmRemoveFriend,
-      visitStore,
       closeOnMobile,
-      // hover banner
       friendItemStyle,
     };
   },
@@ -326,20 +297,91 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* Токены секции */
+.scope-lnav {
+  --v-theme-surface: var(--lnav-background);
+  --v-theme-on-surface: var(--lnav-on-surface);
+  --v-theme-outline: var(--lnav-border);
+  --v-theme-surface-variant: var(--lnav-elev-1);
+}
+
+/* Коробка Drawer — рисуем общий подложечный слой через ::before */
 .theme-drawer-left {
-  background-color: transparent !important;
-  color: var(--app-on-surface);
-  border-right: 1px solid var(--app-divider);
-  border-top: 1px solid var(--app-divider);
+  position: relative;
+  /* Базовый слой секции: свой уникальный цвет */
+  --lnav-layer: var(--lnav-background);
+
+  background: transparent !important;
+  color: var(
+    --lnav-on-surface,
+    var(--app-on-surface, var(--v-theme-on-surface))
+  );
+  border-right: 1px solid var(--lnav-border, var(--app-outline-variant));
+  border-top: 1px solid var(--lnav-border, var(--app-outline-variant));
   box-shadow: none !important;
 }
 
+/* Сам слой (не перекрывает клики) */
+.theme-drawer-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--lnav-layer);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* При фон-картинке: либо полностью прозрачный слой, либо лёгкий тинт */
+.theme-drawer-left.lnav-has-image {
+  /* Выберите один вариант: прозрачный… */
+  --lnav-layer: transparent;
+
+  /* …или нежный тинт (раскомментируйте и закомментируйте transparent выше)
+  --lnav-layer: color-mix(in oklab, var(--lnav-background) 22%, transparent);
+  */
+}
+
+/* Контент Drawer — прозрачный и выше слоя */
+.theme-drawer-left :deep(.v-navigation-drawer__content) {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: transparent !important;
+  color: var(--lnav-on-surface);
+}
+
+/* Карточки — тоже прозрачные и выше слоя */
+.theme-drawer-left :deep(.v-card),
+.theme-drawer-left :deep(.v-navigation-drawer__append) {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  color: var(--lnav-on-surface);
+}
+
+/* Список — прозрачный */
+:deep(.v-list) {
+  background: transparent !important;
+  color: var(--lnav-on-surface);
+}
+
+/* Ховер — как был */
+:deep(.v-list-item:hover) {
+  background: color-mix(
+    in oklab,
+    var(--lnav-on-surface) 10%,
+    transparent
+  ) !important;
+}
+
+/* Прочее — без изменений */
 .toolbar-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-
 .nav-item {
   display: flex;
   align-items: center;
@@ -347,18 +389,13 @@ export default defineComponent({
   padding: 8px 6px;
   border-radius: 8px;
   user-select: none;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s, color 0.15s;
 }
 .nav-item:hover {
-  background-color: var(--app-hover-color);
+  background-color: var(--lnav-hover);
 }
-
-/* Элементы списка */
 :deep(.v-list-item) {
-  color: var(--app-on-surface);
-}
-:deep(.v-list-item:hover) {
-  background: var(--app-hover-color);
+  color: var(--lnav-on-surface);
 }
 :deep(.v-list-item--active) {
   background: var(--app-selected-color);

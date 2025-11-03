@@ -1,0 +1,24 @@
+:root {
+/* безопасные дефолты, чтобы не было «серого» кадра */
+--app-surface: var(--v-theme-surface, #111);
+--app-on-surface: var(--v-theme-on-surface, #fff);
+--app-outline-variant: var(--v-theme-outline, #333);
+
+
+--main-background: var(--app-surface);
+--main-on-surface: var(--app-on-surface);
+--main-border: var(--app-outline-variant);
+--main-elev-1: color-mix(in oklab, var(--main-background) 92%, black);
+}
+
+
+/* Глобальный скоуп секции main — доступен сразу на первом кадре */
+.scope-main {
+--v-theme-surface: var(--main-background);
+--v-theme-on-surface: var(--main-on-surface);
+--v-theme-outline: var(--main-border);
+--v-theme-surface-variant: var(--main-elev-1);
+color: var(--main-on-surface);
+background: transparent;
+}
+

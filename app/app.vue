@@ -5,7 +5,11 @@
     <!-- Overlay для читаемости поверх картинок -->
     <div class="app-bg-overlay"></div>
 
-    <v-app-bar color="transparent" elevation="0" height="48" class="app-bar">
+    <v-app-bar
+      color='var(--rnav-elev-1)'
+      elevation="0"
+      height="48"
+      >
       <v-spacer />
       <v-avatar :size="30" :rounded="99999">
         <v-img :src="defaultLogo" cover />
@@ -29,10 +33,10 @@
 
 <script setup lang="ts">
 import CallWindowProvider from "~/components/CallWindowProvider.vue";
-import defaultLogo from "./assets/app/logo.png"
+import defaultLogo from "./assets/app/logo.png";
 import ThemeBridge from "./components/system/ThemeBridge.vue";
 import AlertOverlayStack from "./components/alerts/AlertOverlayStack.vue";
-import 'vue-gif-emoji-picker/dist/style.css'
+import "vue-gif-emoji-picker/dist/style.css";
 </script>
 
 <style>
@@ -85,13 +89,13 @@ body,
 
 .app-main {
   /* без явной высоты — Vuetify сам учитывает v-app-bar */
-  min-height: 0;     /* важно, чтобы flex-контейнеры внутри могли сжиматься */
-  overflow: hidden;  /* убираем прокрутку у main, пусть скроллятся внутренние области */
+  min-height: 0; /* важно, чтобы flex-контейнеры внутри могли сжиматься */
+  overflow: hidden; /* убираем прокрутку у main, пусть скроллятся внутренние области */
 }
-.app-bar {
+.v-app-bar {
   backdrop-filter: blur(6px);
-  background: color-mix(in oklab, var(--app-bg-overlay-color) 0%, var(--app-surface-3) 30%);
-  border-bottom: 1px solid var(--app-divider);
-  color: var(--app-on-surface);
 }
+
+
+
 </style>

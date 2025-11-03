@@ -1,4 +1,4 @@
-<!-- ActivityUserTab.vue -->
+<!-- components/ActivityUserTab.vue -->
 <template>
   <v-navigation-drawer
     v-model="internalModel"
@@ -106,29 +106,26 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Растягиваем контент drawer’а и карточку на всю доступную высоту */
 .theme-drawer-right {
   background-color: transparent !important;
-  color: var(--app-on-surface);
+  color: var(--rnav-on-surface);
   box-shadow: none !important;
+  border: 0px;
 }
-
-/* Контейнер контента drawer’а на всю высоту, колоночный */
 .theme-drawer-right :deep(.v-navigation-drawer__content) {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--rnav-surface);
+  color: var(--rnav-on-surface);
 }
-
-/* Карточка растягивается (flex:1) */
 :deep(.v-card) {
-  background: var(--app-surface);
-  color: var(--app-on-surface);
+  background: var(--rnav-elev-1);
+  color: var(--rnav-on-surface);
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
 }
-
 .card-title {
   font-weight: 600;
 }

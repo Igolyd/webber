@@ -16,60 +16,38 @@ import {
 import { useRoute } from "vue-router";
 import { useGroupThemesStore } from "~/stores/groupThemes";
 
-// Базовая модель кастомной темы
 type CustomTheme = {
-  textColor: string;
-  bgKind: "color" | "gradient" | "image";
+  textColor?: string;
+  bgKind?: "color" | "gradient" | "image";
   bgColor?: string;
   bgGradient?: string;
   bgImage?: string;
   bgSize?: string;
   bgRepeat?: string;
   bgPosition?: string;
-  overlayColor: string;
-  overlayOpacity: number;
-  cardBg: string;
-  borderColor: string;
-  hoverColor: string;
-  primaryColor: string;
-  surfaceVariantColor: string;
-
-  onPrimary?: string;
-  secondaryColor?: string;
-  onSecondary?: string;
-  divider?: string;
-
-  [key: string]: unknown;
+  overlayColor?: string;
+  overlayOpacity?: number;
+  cardBg?: string;
+  borderColor?: string;
+  hoverColor?: string;
+  primaryColor?: string;
+  surfaceVariantColor?: string;
+  sections?: Record<
+    string,
+    Partial<{
+      enabled: boolean;
+      surface: string;
+      onSurface: string;
+      border: string;
+      hover: string;
+      elev1: string;
+    }>
+  >;
 };
 
-type ResolvedTheme = CustomTheme & {
-  surface: string;
-  surface2: string;
-  surface3: string;
-  surfaceVariant: string;
-  onSurface: string;
-  onSurfaceVariant: string;
-  outline: string;
-  outlineVariant: string;
-  divider: string;
-  secondaryColor: string;
-  onPrimary: string;
-  onSecondary: string;
-  selectedColor: string;
-  pressedColor: string;
-  focusRing: string;
-
-  btnPrimaryBg: string;
-  btnPrimaryColor: string;
-  btnTonalBg: string;
-  btnTonalColor: string;
-  btnOutlineBorder: string;
-  btnOutlineHover: string;
-};
-
-// “легкие” типы для сто́ров, чтобы не использовать any
 interface CustomThemeStoreLike {
   getSnapshot?: () => Partial<CustomTheme>;
+  cssVars?: { value: Record<string, string> };
   $subscribe?: (cb: () => void) => unknown;
 }
 interface ThemeOverrideLike {
@@ -91,12 +69,16 @@ const custom = useCustomThemeStore() as unknown as CustomThemeStoreLike;
 const override = useThemeOverrideStore() as unknown as ThemeOverrideLike;
 const vuetify: ThemeInstance = useTheme();
 
-// Пресеты
-const PRESETS: Record<"light" | "dark", CustomTheme> = {
+const PRESETS: Record<"light" | "dark", Required<CustomTheme>> = {
   light: {
     textColor: "#281F40",
     bgKind: "color",
     bgColor: "#FBFAFF",
+    bgGradient: "",
+    bgImage: "",
+    bgSize: "cover",
+    bgRepeat: "no-repeat",
+    bgPosition: "center",
     overlayColor: "#000000",
     overlayOpacity: 0,
     cardBg: "#FFFFFF",
@@ -104,11 +86,17 @@ const PRESETS: Record<"light" | "dark", CustomTheme> = {
     hoverColor: "rgba(0,0,0,0.06)",
     primaryColor: "#927FBF",
     surfaceVariantColor: "#F1EEFA",
+    sections: {},
   },
   dark: {
     textColor: "#E2DCF4",
     bgKind: "color",
     bgColor: "#1A1526",
+    bgGradient: "",
+    bgImage: "",
+    bgSize: "cover",
+    bgRepeat: "no-repeat",
+    bgPosition: "center",
     overlayColor: "#000000",
     overlayOpacity: 0,
     cardBg: "#201833",
@@ -116,6 +104,7 @@ const PRESETS: Record<"light" | "dark", CustomTheme> = {
     hoverColor: "rgba(255,255,255,0.08)",
     primaryColor: "#A896E6",
     surfaceVariantColor: "#37304F",
+    sections: {},
   },
 };
 
@@ -127,7 +116,6 @@ function applyAll() {
   isApplying = true;
 
   try {
-    // Нормализуем старые ключи
     const raw = (theme.value as string) || "classic";
     const effective: SystemTheme | "custom" =
       raw == "light"
@@ -142,6 +130,8 @@ function applyAll() {
               "clouds",
               "lime",
               "hacker",
+              "white",
+              "void",
               "custom",
             ] as const
           ).includes(raw as any)
@@ -149,66 +139,72 @@ function applyAll() {
         : "classic";
 
     if (effective !== "custom") {
-      // системные цвета и токены Vuetify
+      // 1) Базовые переменные системной темы (включая секции по умолчанию)
       applyCssVarsRaw(systemVars[effective] as Record<string, string>);
+      // 2) Vuetify цвета
       const def = systemVuetify[effective];
       applyVuetifyColors(
         def.dark ? "dark" : "light",
-        def.colors as Record<string, string>,
-        def.dark ?? false
+        def.colors as Record<string, string>
       );
-
-      // ВАЖНО: поверх системного набора накладываем групповой override (без смены темы Vuetify),
-      // чтобы фон/картинка/оверлей/бордеры в превью групп отрабатывали.
+      // 3) Накатываем group override (фон/оверлей/секционные overrides)
       const basePreset = def.dark ? PRESETS.dark : PRESETS.light;
       const data = override.override
         ? clampCustom({ ...basePreset, ...override.override })
         : basePreset;
-      applyCssVars(data);
-
+      applyBgAndBasicVars(data);
+      // 4) Прозрачность секций при bgKind=image/gradient + секционные overrides
+      applySectionBackdropAndOverrides(data);
+      // 5) Фон документа
+      applyBackgroundFromVars();
       return;
     }
 
-    // Custom
-    const base = clampCustom(custom.getSnapshot?.() ?? {});
-    const ov = override.override ?? null;
-    const merged = ov ? clampCustom({ ...base, ...ov }) : base;
-    // здесь можно вызывать resolveTheme, но для соответствия «рабочей» версии достаточно raw CustomTheme
-    applyCssVars(merged);
-    applyVuetifyTheme("custom", merged);
+    // Custom: применяем ПОЛНЫЙ набор переменных из custom.cssVars (там уже учтены секции)
+    const cssVars = custom.cssVars?.value as Record<string, string> | undefined;
+    if (cssVars && Object.keys(cssVars).length) {
+      applyCssVarsRaw(cssVars);
+    } else {
+      // fallback: применим хотя бы базовые
+      const base = clampCustom(custom.getSnapshot?.() ?? {});
+      applyBgAndBasicVars(base);
+      applySectionBackdropAndOverrides(base);
+    }
+    // Цвета Vuetify под custom
+    applyVuetifyThemeFromVars();
+    applyBackgroundFromVars();
   } finally {
     isApplying = false;
   }
 }
 
-// Проставляем CSS vars напрямую из объекта vars (из presets.ts)
 function applyCssVarsRaw(vars: Record<string, string>) {
   const root = document.documentElement;
-  for (const [k, v] of Object.entries(vars)) {
+  for (const [k, v] of Object.entries(vars))
     root.style.setProperty(k, String(v));
-  }
 }
-function applyCssVars(data: CustomTheme) {
+
+// Применение только базовых переменных (фон, текст, кнопки) — без секций
+function applyBgAndBasicVars(data: Required<CustomTheme>) {
   const root = document.documentElement;
 
-  // Базовые
   root.style.setProperty("--app-text-color", data.textColor);
   root.style.setProperty("--app-card-bg", data.cardBg);
   root.style.setProperty("--app-border-color", data.borderColor);
-
-  // Hover
   root.style.setProperty(
     "--app-hover-color",
     data.hoverColor || "rgba(127,127,127,0.08)"
   );
 
-  // Фон
   const kind = data.bgKind;
   const bgColor = data.bgColor ?? "transparent";
-  root.style.setProperty("--app-bg-color", bgColor);
+  root.style.setProperty(
+    "--app-bg-color",
+    kind === "color" ? bgColor : "#0000"
+  );
 
   if (kind === "gradient") {
-    const grad = data.bgGradient?.trim() || "none";
+    const grad = (data.bgGradient || "none").trim();
     root.style.setProperty("--app-bg-image", grad);
   } else if (kind === "image") {
     const img = data.bgImage
@@ -239,51 +235,149 @@ function applyCssVars(data: CustomTheme) {
     "--app-bg-overlay-opacity",
     String(data.overlayOpacity ?? 0)
   );
+
+  // Ключевые акценты для Vuetify переменных
+  root.style.setProperty("--v-theme-primary", data.primaryColor);
+  root.style.setProperty(
+    "--v-theme-surface-variant",
+    String(
+      getComputedStyle(root).getPropertyValue("--app-surface-variant") ||
+        data.surfaceVariantColor
+    )
+  );
+  root.style.setProperty(
+    "--v-theme-outline",
+    String(
+      getComputedStyle(root).getPropertyValue("--app-outline") ||
+        data.borderColor
+    )
+  );
 }
-function applyVuetifyTheme(
-  name: "light" | "dark" | "custom",
-  data: CustomTheme
-) {
-  const vuetifyTheme = vuetify; // ThemeInstance
 
-  if (name !== "custom") {
-    vuetifyTheme.change(name);
-    return;
+// Делаем секции полупрозрачными на изображении/градиенте и накатываем секционные overrides
+function applySectionBackdropAndOverrides(data: Required<CustomTheme>) {
+  const root = document.documentElement;
+  const cs = getComputedStyle(root);
+
+  const isBackdrop = data.bgKind === "image" || data.bgKind === "gradient";
+
+  // Небольшой хелпер: вернуть микс дефолтной поверхности с прозрачностью
+  const mix = (color: string, a = 85) =>
+    isBackdrop ? `color-mix(in oklab, ${color} ${a}%, transparent)` : color;
+
+  // Читаем текущие дефолтные секции (проставленные systemVars/custom.cssVars ранее)
+  const read = (name: string, fallback: string) =>
+    cs.getPropertyValue(name)?.trim() || fallback;
+
+  const sectionKeys = [
+    "hdr",
+    "lnav",
+    "main",
+    "rnav",
+    "topnav",
+    "composer",
+    "dialog",
+    "menu",
+    "mymini", // NEW
+  ] as const;
+
+  for (const key of sectionKeys) {
+    const surfVar = `--${key}-surface`;
+    const onVar = `--${key}-on-surface`;
+    const borderVar = `--${key}-border`;
+    const hoverVar = key === "dialog" || key === "menu" ? "" : `--${key}-hover`;
+    const elevVar = key === "dialog" || key === "menu" ? "" : `--${key}-elev-1`;
+
+    const defSurface = read(surfVar, read("--app-surface", "#111"));
+    const defOn = read(onVar, read("--app-on-surface", data.textColor));
+    const defBorder = read(
+      borderVar,
+      read("--app-outline-variant", data.borderColor)
+    );
+    const defHover = hoverVar
+      ? read(hoverVar, read("--app-hover-color", data.hoverColor))
+      : "";
+    const defElev = elevVar
+      ? read(elevVar, read("--app-surface-2", "#222"))
+      : "";
+
+    // Применяем overrides, если включены
+    const ov =
+      data.sections?.[key as keyof NonNullable<CustomTheme["sections"]>];
+    const use = ov?.enabled ? ov : undefined;
+
+    // Для dialog/menu НЕ просвечиваем (читаемость), остальные — с миксом
+    const shouldMix = isBackdrop && key !== "dialog" && key !== "menu";
+    const surfaceFinal = use?.surface
+      ? shouldMix
+        ? mix(use.surface)
+        : use.surface
+      : shouldMix
+      ? mix(defSurface)
+      : defSurface;
+    const onFinal = use?.onSurface || defOn;
+    const borderFinal = use?.border || defBorder;
+    const hoverFinal = hoverVar ? use?.hover || defHover : "";
+    const elevFinal = elevVar
+      ? use?.elev1
+        ? shouldMix
+          ? mix(use.elev1)
+          : use.elev1
+        : shouldMix
+        ? mix(defElev)
+        : defElev
+      : "";
+
+    root.style.setProperty(surfVar, surfaceFinal);
+    root.style.setProperty(onVar, onFinal);
+    root.style.setProperty(borderVar, borderFinal);
+    if (hoverVar) root.style.setProperty(hoverVar, hoverFinal);
+    if (elevVar) root.style.setProperty(elevVar, elevFinal);
   }
+}
 
-  const baseColor = data.cardBg || data.bgColor || "#121212";
-  const isDark = isDarkColor(baseColor);
+function applyVuetifyThemeFromVars() {
+  const cs = getComputedStyle(document.documentElement);
+  const bg = cs.getPropertyValue("--app-bg-color")?.trim() || "#121212";
+  const surface =
+    cs.getPropertyValue("--app-surface")?.trim() ||
+    cs.getPropertyValue("--app-card-bg")?.trim() ||
+    bg;
+  const text =
+    cs.getPropertyValue("--app-on-surface")?.trim() ||
+    cs.getPropertyValue("--app-text-color")?.trim() ||
+    "#fff";
+  const primary = cs.getPropertyValue("--app-primary")?.trim() || "#7C8CF8";
+  const outline = cs.getPropertyValue("--app-outline")?.trim() || "#2a2a2a";
 
-  vuetifyTheme.themes.value.custom = {
+  const isDark = isDarkColor(surface || bg);
+
+  vuetify.themes.value.custom = {
     dark: isDark,
     colors: {
-      background: data.bgColor || (isDark ? "#121212" : "#ffffff"),
-      surface: data.cardBg,
-      "on-surface": data.textColor,
-      outline: data.borderColor,
-
-      primary: data.primaryColor,
-      "surface-variant": data.surfaceVariantColor,
-
+      background: bg || (isDark ? "#121212" : "#ffffff"),
+      surface: surface || (isDark ? "#1e1e1e" : "#ffffff"),
+      "on-surface": text,
+      outline,
+      primary,
       secondary: isDark ? "#9aa0a6" : "#6c757d",
       error: "#ef4444",
       info: "#60a5fa",
       success: "#10b981",
       warning: "#f59e0b",
+      "surface-variant":
+        cs.getPropertyValue("--app-surface-variant")?.trim() || surface,
     },
     variables: {},
   };
-
-  vuetifyTheme.change("custom");
+  vuetify.change("custom");
 }
-// Замена applyVuetifyTheme для простых light/dark из presets.ts
+
 function applyVuetifyColors(
   name: "light" | "dark",
-  colors: Record<string, string>,
-  darkFlag: boolean
+  colors: Record<string, string>
 ) {
   const themes = vuetify.themes.value;
-
   if (name === "light") {
     themes.light = {
       dark: false,
@@ -297,31 +391,15 @@ function applyVuetifyColors(
       variables: themes.dark?.variables ?? {},
     };
   }
-
   vuetify.change(name);
-
-  // Дублируем основные CSS-переменные Vuetify (опционально)
-  const root = document.documentElement;
-  root.style.setProperty("--v-theme-primary", colors.primary);
-  root.style.setProperty(
-    "--v-theme-on-primary",
-    colors["on-primary"] ?? "#fff"
-  );
-  root.style.setProperty(
-    "--v-theme-surface-variant",
-    colors["surface-variant"]
-  );
-  root.style.setProperty("--v-theme-on-surface", colors["on-surface"]);
-  root.style.setProperty("--v-theme-outline", colors.outline);
 }
 
-// Групповые темы
+// Подхватываем override темы группы на роутинге
 function syncGroupThemeOverride() {
   const gid = String(
     (route.params as Record<string, string | number | undefined>)?.id ?? ""
   );
   const preferPersonal = appearance.preferPersonalThemeInGroups;
-
   if (!gid) {
     override.set?.(null);
     return;
@@ -335,171 +413,91 @@ function syncGroupThemeOverride() {
     override.set?.(null);
     return;
   }
-  override.set?.({ ...snap }); // Partial<CustomTheme>
+  override.set?.({ ...snap });
 }
 
-// Безопасные значения
-function clampCustom(raw: Partial<CustomTheme>): CustomTheme {
-  const safe = { ...(raw ?? {}) } as CustomTheme;
-  if (!safe.textColor) safe.textColor = "#eaeaea";
-  if (!safe.cardBg) safe.cardBg = "#1e1e1e";
-  if (!safe.borderColor) safe.borderColor = "#2a2a2a";
-  if (!safe.bgKind) safe.bgKind = "color";
-  if (safe.bgKind === "color" && !safe.bgColor) safe.bgColor = "#121212";
-  if (!safe.overlayColor) safe.overlayColor = "#000000";
-  if (typeof safe.overlayOpacity !== "number")
-    safe.overlayOpacity = Number(safe.overlayOpacity ?? 0) || 0;
-  if (!safe.bgSize) safe.bgSize = "cover";
-  if (!safe.bgRepeat) safe.bgRepeat = "no-repeat";
-  if (!safe.bgPosition) safe.bgPosition = "center";
-  if (!safe.hoverColor) safe.hoverColor = "rgba(255,255,255,0.08)";
-  if (!safe.primaryColor) safe.primaryColor = "#A896E6";
-  if (!safe.surfaceVariantColor) safe.surfaceVariantColor = "#3a3a3a";
+function clampCustom(raw: Partial<CustomTheme>): Required<CustomTheme> {
+  const safe: Required<CustomTheme> = {
+    textColor: raw.textColor || "#eaeaea",
+    bgKind: raw.bgKind || "color",
+    bgColor: raw.bgColor || "#121212",
+    bgGradient: raw.bgGradient || "",
+    bgImage: raw.bgImage || "",
+    bgSize: raw.bgSize || "cover",
+    bgRepeat: raw.bgRepeat || "no-repeat",
+    bgPosition: raw.bgPosition || "center",
+    overlayColor: raw.overlayColor || "#000000",
+    overlayOpacity:
+      typeof raw.overlayOpacity === "number" ? raw.overlayOpacity : 0,
+    cardBg: raw.cardBg || "#1e1e1e",
+    borderColor: raw.borderColor || "#2a2a2a",
+    hoverColor: raw.hoverColor || "rgba(255,255,255,0.08)",
+    primaryColor: raw.primaryColor || "#A896E6",
+    surfaceVariantColor: raw.surfaceVariantColor || "#3a3a3a",
+    sections: raw.sections || {},
+  };
   return safe;
 }
 
-function resolveTheme(c: CustomTheme): ResolvedTheme {
-  const dark = isDarkColor(c.cardBg || c.bgColor || "#121212");
-
-  const surface = c.cardBg;
-  const surfaceVariant = c.surfaceVariantColor || c.cardBg;
-
-  const surface2 = mixColors(
-    surface,
-    dark ? "#FFFFFF" : "#000000",
-    dark ? 0.04 : 0.02
-  );
-  const surface3 = mixColors(
-    surface,
-    dark ? "#FFFFFF" : "#000000",
-    dark ? 0.08 : 0.04
-  );
-
-  const onSurface = c.textColor;
-  const onSurfaceVariant = mixColors(
-    onSurface,
-    dark ? "#000000" : "#FFFFFF",
-    0.2
-  );
-
-  const outline = c.borderColor;
-  const outlineVariant = c.borderColor;
-  const divider =
-    c.divider || (dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)");
-
-  const secondaryColor = c.secondaryColor || (dark ? "#C7B8FF" : "#6FA9FF");
-
-  const onPrimary =
-    c.onPrimary ||
-    (isDarkColor(c.primaryColor) ? "#FFFFFF" : dark ? "#1A132E" : "#FFFFFF");
-  const onSecondary =
-    c.onSecondary ||
-    (isDarkColor(secondaryColor) ? "#FFFFFF" : dark ? "#201833" : "#0F1B33");
-
-  const selectedColor = dark
-    ? "rgba(168,150,230,0.16)"
-    : "rgba(146,127,191,0.16)";
-  const pressedColor = dark
-    ? "rgba(168,150,230,0.24)"
-    : "rgba(146,127,191,0.24)";
-  const focusRing = `color-mix(in oklab, ${c.primaryColor} 60%, transparent)`;
-
-  const btnPrimaryBg = c.primaryColor;
-  const btnPrimaryColor = onPrimary;
-  const btnTonalBg = surfaceVariant;
-  const btnTonalColor = onSurface;
-  const btnOutlineBorder = outline;
-  const btnOutlineHover = c.hoverColor;
-
-  return {
-    ...c,
-    surface,
-    surface2,
-    surface3,
-    surfaceVariant,
-    onSurface,
-    onSurfaceVariant,
-    outline,
-    outlineVariant,
-    divider,
-    secondaryColor,
-    onPrimary,
-    onSecondary,
-    selectedColor,
-    pressedColor,
-    focusRing,
-    btnPrimaryBg,
-    btnPrimaryColor,
-    btnTonalBg,
-    btnTonalColor,
-    btnOutlineBorder,
-    btnOutlineHover,
-  };
-}
-
-// Утилиты
-
+// ——— Утилиты
 function toLinear(c: number): number {
   const v = c / 255;
   return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
 }
-
 function isDarkColor(color: string): boolean {
   const { r, g, b } = parseColor(color);
-  const R = toLinear(r);
-  const G = toLinear(g);
-  const B = toLinear(b);
+  const R = toLinear(r),
+    G = toLinear(g),
+    B = toLinear(b);
   const luminance = 0.2126 * R + 0.7152 * G + 0.0722 * B;
   return luminance < 0.5;
 }
-
 function parseColor(input: string): { r: number; g: number; b: number } {
   if (!input) return { r: 18, g: 18, b: 18 };
   const s = String(input).trim().toLowerCase();
-
   if (s.startsWith("#")) {
     const hex = s.slice(1);
-    if (hex.length === 3) {
+    if (hex.length === 3)
       return {
         r: parseInt(hex[0] + hex[0], 16),
         g: parseInt(hex[1] + hex[1], 16),
         b: parseInt(hex[2] + hex[2], 16),
       };
-    }
-    if (hex.length >= 6) {
+    if (hex.length >= 6)
       return {
         r: parseInt(hex.slice(0, 2), 16),
         g: parseInt(hex.slice(2, 4), 16),
         b: parseInt(hex.slice(4, 6), 16),
       };
-    }
   }
-
   if (s.startsWith("rgb")) {
-    const m = s.match(/rgba?$([^)]+)$/);
+    const m = s.match(`/rgba?$([^)]+)$/`);
     if (m) {
       const parts = m[1].split(",").map((p) => p.trim());
       return {
-        r: clamp255(Number(parts[0])),
-        g: clamp255(Number(parts[1])),
-        b: clamp255(Number(parts[2])),
+        r: Math.max(0, Math.min(255, Math.round(Number(parts[0])))),
+        g: Math.max(0, Math.min(255, Math.round(Number(parts[1])))),
+        b: Math.max(0, Math.min(255, Math.round(Number(parts[2])))),
       };
     }
   }
   return { r: 18, g: 18, b: 18 };
 }
 
-function clamp255(n: number) {
-  return Math.max(0, Math.min(255, Math.round(n)));
-}
-
-function mixColors(aColor: string, bColor: string, amount = 0.5): string {
-  const a = parseColor(aColor);
-  const b = parseColor(bColor);
-  const r = clamp255(a.r * (1 - amount) + b.r * amount);
-  const g = clamp255(a.g * (1 - amount) + b.g * amount);
-  const b2 = clamp255(a.b * (1 - amount) + b.b * amount);
-  return `rgb(${r}, ${g}, ${b2})`;
+// Жёстко задаём фон документу из наших vars — чтобы картинка точно была видна
+function applyBackgroundFromVars() {
+  const root = document.documentElement;
+  const cs = getComputedStyle(root);
+  const bgColor = cs.getPropertyValue("--app-bg-color") || "";
+  const bgImage = cs.getPropertyValue("--app-bg-image") || "none";
+  const bgPos = cs.getPropertyValue("--app-bg-position") || "center center";
+  const bgSize = cs.getPropertyValue("--app-bg-size") || "cover";
+  const bgRepeat = cs.getPropertyValue("--app-bg-repeat") || "no-repeat";
+  root.style.backgroundColor = bgColor.trim() || "transparent";
+  root.style.backgroundImage = bgImage.trim() || "none";
+  root.style.backgroundPosition = bgPos.trim();
+  root.style.backgroundSize = bgSize.trim();
+  root.style.backgroundRepeat = bgRepeat.trim();
 }
 
 function trySubscribe(
@@ -510,21 +508,16 @@ function trySubscribe(
 }
 
 onMounted(async () => {
-  // Сначала синхронизируем group override
   syncGroupThemeOverride();
   await nextTick();
-
-  // Применяем тему
   applyAll();
 
-  // Реакция на смену общей темы (light/dark/custom)
+  // Тема
   watch(theme, () => applyAll(), { flush: "post" });
-
-  // Подписки без any
+  // Изменения кастомной/override
   trySubscribe(custom, applyAll);
   trySubscribe(override, applyAll);
-
-  // Роут и флаг персональной темы в группах
+  // Роут и флаг "предпочитать личную тему в группах"
   watch(
     () => [route.fullPath, appearance.preferPersonalThemeInGroups],
     () => {

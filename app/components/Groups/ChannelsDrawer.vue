@@ -4,7 +4,9 @@
     :permanent="!isSmAndDown"
     :temporary="isSmAndDown"
     width="360"
-    class="theme-drawer-left"
+    color="transparent"
+    elevation="0"
+    class="theme-drawer-left scope-lnav"
     :scrim="isSmAndDown"
   >
     <div class="px-4 py-2 d-flex align-center justify-space-between">
@@ -93,11 +95,23 @@ const model = computed({
 });
 </script>
 <style scoped>
+.scope-lnav {
+  --v-theme-surface: var(--lnav-background);
+  --v-theme-on-surface: var(--lnav-on-surface);
+  --v-theme-outline: var(--lnav-border);
+  --v-theme-surface-variant: var(--lnav-elev-1);
+}
 .theme-drawer-left {
-  background-color: transparent !important;
-  color: var(--app-text-color);
-  border-right: 1px solid var(--app-border-color);
-  border-top: 1px solid var(--app-border-color);
+  background: var(
+    --lnav-background,
+    var(--app-surface, var(--v-theme-surface))
+  ) !important;
+  color: var(
+    --lnav-on-surface,
+    var(--app-on-surface, var(--v-theme-on-surface))
+  );
+  border-right: 1px solid var(--lnav-border, var(--app-outline-variant));
+  border-top: 1px solid var(--lnav-border, var(--app-outline-variant));
   box-shadow: none !important;
 }
 </style>

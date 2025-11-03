@@ -4,7 +4,9 @@
     rail
     permanent
     location="left"
-    class="theme-drawer-left"
+    color="transparent"
+    elevation="0"
+    class="theme-drawer-left scope-rnav"
   >
     <v-container class="functional-panel">
       <v-btn
@@ -16,11 +18,12 @@
         <v-icon>mdi-view-list</v-icon>
       </v-btn>
       <NuxtLink to="/market">
-        <v-icon>mdi-store</v-icon>
+        <v-btn icon :title="'Магазин'">
+          <v-icon>mdi-store</v-icon>
+        </v-btn>
       </NuxtLink>
     </v-container>
-
-    <v-list density="compact" nav class="center-list">
+    <v-list density="compact" nav class="center-list" color="transparent">
       <v-list-item
         v-for="group in groups"
         :key="group.id"
@@ -72,10 +75,22 @@ const openPrivateMessage = () => {
 </script>
 
 <style scoped>
+.scope-rnav {
+  --v-theme-surface: var(--rnav-surface);
+  --v-theme-on-surface: var(--rnav-on-surface);
+  --v-theme-outline: var(--rnav-border);
+  --v-theme-surface-variant: var(--rnav-elev-1);
+}
 .theme-drawer-left {
-  background-color: transparent !important;
-  color: var(--app-text-color);
-  border-right: 1px solid var(--app-border-color);
+  background: var(
+    --rnav-elev-1,
+    var(--app-surface, var(--v-theme-surface))
+  ) !important;
+  color: var(
+    --rnav-on-surface,
+    var(--app-on-surface, var(--v-theme-on-surface))
+  );
+  border-right: 1px solid var(--rnav-border, var(--app-outline-variant));
   box-shadow: none !important;
 }
 .functional-panel {
@@ -87,8 +102,6 @@ const openPrivateMessage = () => {
   padding-right: 2px;
   padding-left: 2px;
 }
-
-/* Центрируем содержимое элемента списка и убираем боковые паддинги */
 .center-list :deep(.v-list-item) {
   padding-inline: 0;
 }

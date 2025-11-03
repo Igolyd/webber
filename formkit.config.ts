@@ -12,7 +12,6 @@ const config: DefaultConfigOptions = {
       outer: 'mb-4',
       wrapper: '',
       inner: '',
-      // Для кнопок submit у FormKit, если используете:
       button: 'btn-primary rounded-md px-3 py-2',
     }
   }

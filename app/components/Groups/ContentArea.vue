@@ -8,7 +8,8 @@
       absolute
       floating
       elevation="0"
-      class="content-header-drawer"
+      color="transparent"
+      class="content-header-drawer scope-hdr"
     >
       <div class="content-header">
         <h2 class="text-h6"># {{ activeTextChannelName }}</h2>
@@ -31,9 +32,8 @@
         </v-btn>
       </div>
     </v-navigation-drawer>
-
-    <section class="content-scroll">
-      <v-card flat class="messages-theme pa-0">
+    <section class="content-scroll scope-main">
+      <v-card flat class="messages-theme pa-0" color="transparent">
         <ChatWindow context="channel" :channel-id="activeTextChannelId" />
       </v-card>
     </section>
@@ -58,21 +58,17 @@ const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
 </script>
 
 <style scoped>
-.content-area {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: transparent;
+.scope-hdr {
+  --v-theme-surface: var(--topnav-background);
+  --v-theme-on-surface: var(--topnav-on-surface);
+  --v-theme-outline: var(--topnav-border);
+  --v-theme-surface-variant: var(--topnav-elev-1);
 }
-
 .content-header-drawer {
-  border-bottom: 1px solid var(--app-border-color);
-  border-top: 1px solid var(--app-border-color);
-  background: color-mix(in oklab, var(--app-surface) 70%, transparent);
+  border-bottom: 1px solid var(--topnav-border, var(--app-outline-variant));
+  border-top: 1px solid var(--topnav-border, var(--app-outline-variant));
+  background: var(--topnav-elev-1, var(--topnav-background, var(--app-surface)));
 }
-
 .content-header {
   display: flex;
   align-items: center;
@@ -80,18 +76,24 @@ const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
   padding: 8px 12px;
   height: 100%;
 }
-
 .content-header .spacer {
   flex: 1;
 }
 
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+}
 .content-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   padding: 0;
+  background: var(--main-background, transparent);
+  color: var(--main-on-surface, inherit);
 }
-
 .messages-theme {
   background: transparent;
   height: 100%;

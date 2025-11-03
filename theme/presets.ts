@@ -2,14 +2,14 @@
 import type { ThemeDefinition } from "vuetify";
 
 export type SystemTheme =
-  | "classic" // тёмно-фиолетовый
-  | "sakura" // светло-фиолетовый
-  | "ocean" // тёмно-синий
-  | "clouds" // светло-синий
-  | "lime" // светло-зелёный
-  | "hacker" // тёмно-зелёный
-  | "white" // Новый: Белый свет
-  | "void"; // Новый: Тьма
+  | "classic" // тёмно-фиолетовая (уютная)
+  | "sakura" // светло-фиолетовая (мягкая, пастельная)
+  | "ocean" // тёмно-синяя
+  | "clouds" // светло-синяя
+  | "lime" // светло-зелёная
+  | "hacker" // тёмно-зелёная
+  | "white" // Белый свет
+  | "void"; // Тьма
 
 export type CssVars = {
   "--app-text-color": string;
@@ -25,6 +25,7 @@ export type CssVars = {
   "--app-hover-color": string;
 
   "--app-surface": string;
+  "--app-surface-backdrop": string;
   "--app-surface-2": string;
   "--app-surface-3": string;
   "--app-surface-variant": string;
@@ -47,35 +48,194 @@ export type CssVars = {
   "--btn-tonal-color": string;
   "--btn-outline-border": string;
   "--btn-outline-hover": string;
+
+  // секционные токены
+  "--hdr-surface": string;
+  "--hdr-on-surface": string;
+  "--hdr-border": string;
+  "--hdr-hover": string;
+  "--hdr-elev-1": string;
+
+  "--lnav-background": string;
+  "--lnav-on-surface": string;
+  "--lnav-border": string;
+  "--lnav-hover": string;
+  "--lnav-elev-1": string;
+  "--lnav-bg-color": string;
+
+
+  "--main-background": string;
+  "--main-on-surface": string;
+  "--main-border": string;
+  "--main-hover": string;
+  "--main-elev-1": string;
+  "--main-bg-color": string;
+
+  "--rnav-surface": string;
+  "--rnav-on-surface": string;
+  "--rnav-border": string;
+  "--rnav-hover": string;
+  "--rnav-elev-1": string;
+
+  "--topnav-background": string;
+  "--topnav-on-surface": string;
+  "--topnav-border": string;
+  "--topnav-hover": string;
+  "--topnav-elev-1": string;
+  "--topnav-bg-color": string;
+
+  "--composer-surface": string;
+  "--composer-on-surface": string;
+  "--composer-border": string;
+  "--composer-hover": string;
+  "--composer-elev-1": string;
+
+  "--dialog-surface": string;
+  "--dialog-on-surface": string;
+  "--dialog-border": string;
+  
+  "--menu-surface": string;
+  "--menu-on-surface": string;
+  "--menu-border": string;
+  // NEW: Мой мини профиль
+  "--mymini-surface": string;
+  "--mymini-on-surface": string;
+  "--mymini-border": string;
+  "--mymini-hover": string;
+  "--mymini-elev-1": string;
+  "--mymini-bg-color": string;
 };
 
-//  ФИОЛЕТОВЫЕ
+// Хелпер секций для системных тем
+function sectionDefaults(
+  v: Omit<
+    CssVars,
+    | "--hdr-surface"
+    | "--hdr-on-surface"
+    | "--hdr-border"
+    | "--hdr-hover"
+    | "--hdr-elev-1"
+    | "--lnav-background"
+    | "--lnav-on-surface"
+    | "--lnav-border"
+    | "--lnav-hover"
+    | "--lnav-elev-1"
+    | "--main-background"
+    | "--main-on-surface"
+    | "--main-border"
+    | "--main-hover"
+    | "--main-elev-1"
+    | "--rnav-surface"
+    | "--rnav-on-surface"
+    | "--rnav-border"
+    | "--rnav-hover"
+    | "--rnav-elev-1"
+    | "--topnav-background"
+    | "--topnav-on-surface"
+    | "--topnav-border"
+    | "--topnav-hover"
+    | "--topnav-elev-1"
+    | "--composer-surface"
+    | "--composer-on-surface"
+    | "--composer-border"
+    | "--composer-hover"
+    | "--composer-elev-1"
+    | "--dialog-surface"
+    | "--dialog-on-surface"
+    | "--dialog-border"
+    | "--menu-surface"
+    | "--menu-on-surface"
+    | "--menu-border"
+  >
+): CssVars {
+  const base = v as any;
+  const surface = v["--app-surface"];
+  const BgMain = v["--main-bg-color"];
+  const onSurface = v["--app-on-surface"];
+  const border = v["--app-outline-variant"];
+  const hover = v["--app-hover-color"];
+  const elev1 = v["--app-surface-2"];
+  return {
+    ...v,
+    "--hdr-surface": surface,
+    "--hdr-on-surface": onSurface,
+    "--hdr-border": border,
+    "--hdr-hover": hover,
+    "--hdr-elev-1": elev1,
+
+    "--lnav-background": v["--lnav-bg-color"],
+    "--lnav-on-surface": onSurface,
+    "--lnav-border": border,
+    "--lnav-hover": hover,
+    "--lnav-elev-1": elev1, //фон у MyProfile
+
+    "--main-background": BgMain,
+    "--main-on-surface": onSurface,
+    "--main-border": border,
+    "--main-hover": hover,
+    "--main-elev-1": elev1,
+
+    "--rnav-surface": surface,
+    "--rnav-on-surface": onSurface,
+    "--rnav-border": border,
+    "--rnav-hover": hover,
+    "--rnav-elev-1": elev1,
+
+    "--topnav-background": v["--topnav-bg-color"],
+    "--topnav-on-surface": onSurface,
+    "--topnav-border": border,
+    "--topnav-hover": hover,
+    "--topnav-elev-1": elev1, 
+
+    "--composer-surface": surface,
+    "--composer-on-surface": onSurface,
+    "--composer-border": border,
+    "--composer-hover": hover,
+    "--composer-elev-1": elev1,
+
+    "--dialog-surface": v["--app-surface-3"],
+    "--dialog-on-surface": onSurface,
+    "--dialog-border": border,
+
+    "--menu-surface": v["--app-surface-2"],
+    "--menu-on-surface": onSurface,
+    "--menu-border": border,
+    // NEW: Мой мини профиль
+    "--mymini-surface": surface,
+    "--mymini-on-surface": onSurface,
+    "--mymini-border": border,
+    "--mymini-hover": hover,
+    "--mymini-elev-1": v["--mymini-bg-color"],
+  } as CssVars;
+}
+
+// ——— Фиолетовые: sakura (светлая), classic (тёмная, уютная)
 const violetLightVuetify: ThemeDefinition = {
   dark: false,
   colors: {
-    background: "#F7F4FF",
+    background: "#F8F7FC",
     surface: "#FFFFFF",
-    "surface-variant": "#F2EEFB",
+    "surface-variant": "#F3F1FA",
     primary: "#8E7BCF",
     "on-primary": "#FFFFFF",
-    secondary: "#7EA6FF",
-    "on-secondary": "#0F1B33",
+    secondary: "#A998F2",
+    "on-secondary": "#1E1636",
     "on-surface": "#2A2144",
     "on-background": "#23193A",
     info: "#4B94F8",
     success: "#2DAE8B",
     warning: "#F5A941",
     error: "#E75A6A",
-    outline: "#D7CFEF",
-    "outline-variant": "#E7E1F7",
+    outline: "#DDD4F1",
+    "outline-variant": "#EAE4F8",
     divider: "#00000014",
   },
 };
-const violetLightVars: CssVars = {
+const violetLightVars = sectionDefaults({
   "--app-text-color": "#2A2144",
-  "--app-bg-color": "#F7F4FF",
+  "--app-bg-color": "#F8F7FC",
   "--app-card-bg": "#FFFFFF",
-  "--app-border-color": "#E7E1F7",
+  "--app-border-color": "#EAE4F8",
   "--app-bg-image": "none",
   "--app-bg-size": "cover",
   "--app-bg-position": "center center",
@@ -84,37 +244,46 @@ const violetLightVars: CssVars = {
   "--app-bg-overlay-opacity": "0",
   "--app-hover-color": "rgba(142,123,207,0.10)",
 
-  "--app-surface": "#FFFFFF",
-  "--app-surface-2": "#FAF8FF",
+  "--app-surface": "#fddcfc",
+  "--app-surface-backdrop": "#FFFFFF",
+  "--app-surface-2": "#f4ddff",
   "--app-surface-3": "#F5F1FE",
-  "--app-surface-variant": "#F2EEFB",
+  "--app-surface-variant": "#F3F1FA",
   "--app-on-surface": "#2A2144",
   "--app-on-surface-variant": "#5D5376",
-  "--app-outline": "#D7CFEF",
-  "--app-outline-variant": "#E7E1F7",
+  "--app-outline": "#DDD4F1",
+  "--app-outline-variant": "#bd7fbe",
   "--app-divider": "rgba(0,0,0,0.08)",
   "--app-primary": "#8E7BCF",
   "--app-on-primary": "#FFFFFF",
-  "--app-secondary": "#7EA6FF",
-  "--app-on-secondary": "#0F1B33",
+  "--app-secondary": "#A998F2",
+  "--app-on-secondary": "#1E1636",
   "--app-selected-color": "rgba(142,123,207,0.16)",
   "--app-pressed-color": "rgba(142,123,207,0.24)",
   "--app-focus-ring": "color-mix(in oklab, #8E7BCF 60%, transparent)",
 
   "--btn-primary-bg": "#8E7BCF",
   "--btn-primary-color": "#FFFFFF",
-  "--btn-tonal-bg": "#F2EEFB",
+  "--btn-tonal-bg": "#F3F1FA",
   "--btn-tonal-color": "#2A2144",
-  "--btn-outline-border": "#D7CFEF",
+  "--btn-outline-border": "#DDD4F1",
   "--btn-outline-hover": "rgba(142,123,207,0.10)",
-};
 
+  "--main-bg-color": "#FFFFFF", //фон основного окна
+
+  "--topnav-bg-color": "#FFFFFF", //фон верхней навигации
+  "--lnav-bg-color": "#f4ddff", //фон левой навигации
+  "--mymini-bg-color": "#F5F1FE",
+
+} as any);
+
+// classic (тёмная уютная фиолетовая)
 const violetDarkVuetify: ThemeDefinition = {
   dark: true,
   colors: {
-    background: "#1A1526",
-    surface: "#201833",
-    "surface-variant": "#37304F",
+    background: "#181426",
+    surface: "#332A49", //меняет список в блоке фон
+    "surface-variant": "#332A49",
     primary: "#A896E6",
     "on-primary": "#1A132E",
     secondary: "#C7B8FF",
@@ -124,16 +293,16 @@ const violetDarkVuetify: ThemeDefinition = {
     success: "#4CC7A1",
     warning: "#FFCC6F",
     error: "#FF6B6B",
-    outline: "#5A4E75",
-    "outline-variant": "#3F3556",
+    outline: "#4D416B",
+    "outline-variant": "#3A3054",
     divider: "#FFFFFF14",
   },
 };
-const violetDarkVars: CssVars = {
+const violetDarkVars = sectionDefaults({
   "--app-text-color": "#E2DCF4",
-  "--app-bg-color": "#1A1526",
+  "--app-bg-color": "#181426",
   "--app-card-bg": "#201833",
-  "--app-border-color": "#3F3556",
+  "--app-border-color": "#3A3054",
   "--app-bg-image": "none",
   "--app-bg-size": "cover",
   "--app-bg-position": "center center",
@@ -142,14 +311,15 @@ const violetDarkVars: CssVars = {
   "--app-bg-overlay-opacity": "0",
   "--app-hover-color": "rgba(168,150,230,0.10)",
 
-  "--app-surface": "#201833",
-  "--app-surface-2": "#261C3D",
-  "--app-surface-3": "#2C2147",
-  "--app-surface-variant": "#37304F",
+  "--app-surface": "#201833", //меняет левую навигацию
+  "--app-surface-backdrop": "#201833",
+  "--app-surface-2": "#201833", //правая навигация и шапка
+  "--app-surface-3": "#2C2147", //
+  "--app-surface-variant": "#332A49",
   "--app-on-surface": "#E2DCF4",
   "--app-on-surface-variant": "#C4BCD9",
-  "--app-outline": "#5A4E75",
-  "--app-outline-variant": "#3F3556",
+  "--app-outline": "#4D416B",
+  "--app-outline-variant": "#3A3054",
   "--app-divider": "rgba(255,255,255,0.08)",
   "--app-primary": "#A896E6",
   "--app-on-primary": "#1A132E",
@@ -161,13 +331,20 @@ const violetDarkVars: CssVars = {
 
   "--btn-primary-bg": "#A896E6",
   "--btn-primary-color": "#1A132E",
-  "--btn-tonal-bg": "#37304F",
+  "--btn-tonal-bg": "#332A49",
   "--btn-tonal-color": "#E2DCF4",
-  "--btn-outline-border": "#5A4E75",
+  "--btn-outline-border": "#4D416B",
   "--btn-outline-hover": "rgba(168,150,230,0.10)",
-};
 
-//  СИНИЕ
+  "--main-bg-color": "#1a1526", //фон основного окна
+  "--topnav-bg-color": "#1a1526", //фон верхней навигации 
+  "--lnav-bg-color": "#2C2147", //фон левой навигации
+  "--mymini-bg-color": "#332A49",
+
+
+} as any);
+
+// ——— Синие
 const blueLightVuetify: ThemeDefinition = {
   dark: false,
   colors: {
@@ -176,7 +353,7 @@ const blueLightVuetify: ThemeDefinition = {
     "surface-variant": "#EAF2FF",
     primary: "#6FA9FF",
     "on-primary": "#FFFFFF",
-    secondary: "#8FD3FF",
+    secondary: "#95C9FF",
     "on-secondary": "#0F1B33",
     "on-surface": "#142038",
     "on-background": "#111A2C",
@@ -186,10 +363,10 @@ const blueLightVuetify: ThemeDefinition = {
     error: "#E55B6A",
     outline: "#D3E3FF",
     "outline-variant": "#E2EEFF",
-    divider: "#00000014",
+    divider: "#00000012",
   },
 };
-const blueLightVars: CssVars = {
+const blueLightVars = sectionDefaults({
   "--app-text-color": "#142038",
   "--app-bg-color": "#F2F7FF",
   "--app-card-bg": "#FFFFFF",
@@ -203,6 +380,7 @@ const blueLightVars: CssVars = {
   "--app-hover-color": "rgba(111,169,255,0.10)",
 
   "--app-surface": "#FFFFFF",
+  "--app-surface-backdrop": "#FFFFFF",
   "--app-surface-2": "#F7FAFF",
   "--app-surface-3": "#F0F6FF",
   "--app-surface-variant": "#EAF2FF",
@@ -211,11 +389,11 @@ const blueLightVars: CssVars = {
 
   "--app-outline": "#D3E3FF",
   "--app-outline-variant": "#E2EEFF",
-  "--app-divider": "rgba(0,0,0,0.08)",
+  "--app-divider": "rgba(0,0,0,0.07)",
 
   "--app-primary": "#6FA9FF",
   "--app-on-primary": "#FFFFFF",
-  "--app-secondary": "#8FD3FF",
+  "--app-secondary": "#95C9FF",
   "--app-on-secondary": "#0F1B33",
 
   "--app-selected-color": "rgba(111,169,255,0.16)",
@@ -228,7 +406,7 @@ const blueLightVars: CssVars = {
   "--btn-tonal-color": "#142038",
   "--btn-outline-border": "#D3E3FF",
   "--btn-outline-hover": "rgba(111,169,255,0.10)",
-};
+} as any);
 
 const blueDarkVuetify: ThemeDefinition = {
   dark: true,
@@ -247,10 +425,10 @@ const blueDarkVuetify: ThemeDefinition = {
     error: "#FF6B6B",
     outline: "#2B3D5F",
     "outline-variant": "#203251",
-    divider: "#FFFFFF14",
+    divider: "#FFFFFF10",
   },
 };
-const blueDarkVars: CssVars = {
+const blueDarkVars = sectionDefaults({
   "--app-text-color": "#DDE6F7",
   "--app-bg-color": "#0F1626",
   "--app-card-bg": "#131C2E",
@@ -264,6 +442,7 @@ const blueDarkVars: CssVars = {
   "--app-hover-color": "rgba(75,148,248,0.12)",
 
   "--app-surface": "#131C2E",
+  "--app-surface-backdrop": "#131C2E",
   "--app-surface-2": "#162136",
   "--app-surface-3": "#1A2741",
   "--app-surface-variant": "#1C2A42",
@@ -286,9 +465,9 @@ const blueDarkVars: CssVars = {
   "--btn-tonal-color": "#DDE6F7",
   "--btn-outline-border": "#2B3D5F",
   "--btn-outline-hover": "rgba(75,148,248,0.12)",
-};
+} as any);
 
-//  ЗЕЛЁНЫЕ
+// ——— Зелёные
 const greenLightVuetify: ThemeDefinition = {
   dark: false,
   colors: {
@@ -307,10 +486,10 @@ const greenLightVuetify: ThemeDefinition = {
     error: "#E9656A",
     outline: "#CDEEDC",
     "outline-variant": "#E0F6E9",
-    divider: "#00000014",
+    divider: "#00000012",
   },
 };
-const greenLightVars: CssVars = {
+const greenLightVars = sectionDefaults({
   "--app-text-color": "#14281E",
   "--app-bg-color": "#F3FFF7",
   "--app-card-bg": "#FFFFFF",
@@ -324,6 +503,7 @@ const greenLightVars: CssVars = {
   "--app-hover-color": "rgba(71,199,142,0.10)",
 
   "--app-surface": "#FFFFFF",
+  "--app-surface-backdrop": "#FFFFFF",
   "--app-surface-2": "#F7FFFA",
   "--app-surface-3": "#EFFBF4",
   "--app-surface-variant": "#E9F8EE",
@@ -332,7 +512,7 @@ const greenLightVars: CssVars = {
 
   "--app-outline": "#CDEEDC",
   "--app-outline-variant": "#E0F6E9",
-  "--app-divider": "rgba(0,0,0,0.08)",
+  "--app-divider": "rgba(0,0,0,0.07)",
 
   "--app-primary": "#47C78E",
   "--app-on-primary": "#0F2A1F",
@@ -349,7 +529,7 @@ const greenLightVars: CssVars = {
   "--btn-tonal-color": "#14281E",
   "--btn-outline-border": "#CDEEDC",
   "--btn-outline-hover": "rgba(71,199,142,0.10)",
-};
+} as any);
 
 const greenDarkVuetify: ThemeDefinition = {
   dark: true,
@@ -368,130 +548,10 @@ const greenDarkVuetify: ThemeDefinition = {
     error: "#FF6B6B",
     outline: "#1C3F30",
     "outline-variant": "#123328",
-    divider: "#FFFFFF14",
-  },
-};
-// Белый свет (очень светлая, нежная)
-const whiteLightVuetify: ThemeDefinition = {
-  dark: false,
-  colors: {
-    background: "#FFFFFF",
-    surface: "#FFFFFF",
-    "surface-variant": "#F6F7FB",
-    primary: "#7C8CF8",
-    "on-primary": "#FFFFFF",
-    secondary: "#A6B4FF",
-    "on-secondary": "#0F1B33",
-    "on-surface": "#1B2333",
-    "on-background": "#111827",
-    info: "#4B94F8",
-    success: "#35B68D",
-    warning: "#F5B64A",
-    error: "#E76A78",
-    outline: "#E5E7EF",
-    "outline-variant": "#EEF0F7",
-    divider: "#00000012",
-  },
-};
-const whiteLightVars: CssVars = {
-  "--app-text-color": "#1B2333",
-  "--app-bg-color": "#FFFFFF",
-  "--app-card-bg": "#FFFFFF",
-  "--app-border-color": "#EEF0F7",
-  "--app-bg-image": "none",
-  "--app-bg-size": "cover",
-  "--app-bg-position": "center center",
-  "--app-bg-repeat": "no-repeat",
-  "--app-bg-overlay-color": "rgba(0,0,0,1)",
-  "--app-bg-overlay-opacity": "0",
-  "--app-hover-color": "rgba(124,140,248,0.10)",
-
-  "--app-surface": "#FFFFFF",
-  "--app-surface-2": "#FAFBFF",
-  "--app-surface-3": "#F6F7FB",
-  "--app-surface-variant": "#F6F7FB",
-  "--app-on-surface": "#1B2333",
-  "--app-on-surface-variant": "#495678",
-  "--app-outline": "#E5E7EF",
-  "--app-outline-variant": "#EEF0F7",
-  "--app-divider": "rgba(0,0,0,0.07)",
-  "--app-primary": "#7C8CF8",
-  "--app-on-primary": "#FFFFFF",
-  "--app-secondary": "#A6B4FF",
-  "--app-on-secondary": "#0F1B33",
-  "--app-selected-color": "rgba(124,140,248,0.16)",
-  "--app-pressed-color": "rgba(124,140,248,0.24)",
-  "--app-focus-ring": "color-mix(in oklab, #7C8CF8 60%, transparent)",
-
-  "--btn-primary-bg": "#7C8CF8",
-  "--btn-primary-color": "#FFFFFF",
-  "--btn-tonal-bg": "#F0F2FD",
-  "--btn-tonal-color": "#1B2333",
-  "--btn-outline-border": "#E5E7EF",
-  "--btn-outline-hover": "rgba(124,140,248,0.10)",
-};
-
-// Тьма (черная, контрастная)
-const voidDarkVuetify: ThemeDefinition = {
-  dark: true,
-  colors: {
-    background: "#0B0B0D",
-    surface: "#0F0F12",
-    "surface-variant": "#17171C",
-    primary: "#9D7BFF",
-    "on-primary": "#120F1F",
-    secondary: "#6EE7B7",
-    "on-secondary": "#0A1411",
-    "on-surface": "#E6E6F0",
-    "on-background": "#F0F0FA",
-    info: "#7FB7FF",
-    success: "#34D399",
-    warning: "#F59E0B",
-    error: "#F87171",
-    outline: "#26262C",
-    "outline-variant": "#1A1A20",
     divider: "#FFFFFF10",
   },
 };
-const voidDarkVars: CssVars = {
-  "--app-text-color": "#E6E6F0",
-  "--app-bg-color": "#0B0B0D",
-  "--app-card-bg": "#0F0F12",
-  "--app-border-color": "#1A1A20",
-  "--app-bg-image": "none",
-  "--app-bg-size": "cover",
-  "--app-bg-position": "center center",
-  "--app-bg-repeat": "no-repeat",
-  "--app-bg-overlay-color": "rgba(0,0,0,1)",
-  "--app-bg-overlay-opacity": "0",
-  "--app-hover-color": "rgba(157,123,255,0.12)",
-
-  "--app-surface": "#0F0F12",
-  "--app-surface-2": "#131318",
-  "--app-surface-3": "#17171C",
-  "--app-surface-variant": "#17171C",
-  "--app-on-surface": "#E6E6F0",
-  "--app-on-surface-variant": "#B8B8CC",
-  "--app-outline": "#26262C",
-  "--app-outline-variant": "#1A1A20",
-  "--app-divider": "rgba(255,255,255,0.07)",
-  "--app-primary": "#9D7BFF",
-  "--app-on-primary": "#120F1F",
-  "--app-secondary": "#6EE7B7",
-  "--app-on-secondary": "#0A1411",
-  "--app-selected-color": "rgba(157,123,255,0.18)",
-  "--app-pressed-color": "rgba(157,123,255,0.26)",
-  "--app-focus-ring": "color-mix(in oklab, #9D7BFF 60%, transparent)",
-
-  "--btn-primary-bg": "#9D7BFF",
-  "--btn-primary-color": "#120F1F",
-  "--btn-tonal-bg": "#17171C",
-  "--btn-tonal-color": "#E6E6F0",
-  "--btn-outline-border": "#26262C",
-  "--btn-outline-hover": "rgba(157,123,255,0.12)",
-};
-
-const greenDarkVars: CssVars = {
+const greenDarkVars = sectionDefaults({
   "--app-text-color": "#D3F1E4",
   "--app-bg-color": "#0D1C16",
   "--app-card-bg": "#0F221B",
@@ -505,6 +565,7 @@ const greenDarkVars: CssVars = {
   "--app-hover-color": "rgba(45,174,139,0.12)",
 
   "--app-surface": "#0F221B",
+  "--app-surface-backdrop": "#0F221B",
   "--app-surface-2": "#11281F",
   "--app-surface-3": "#153024",
   "--app-surface-variant": "#163127",
@@ -527,7 +588,128 @@ const greenDarkVars: CssVars = {
   "--btn-tonal-color": "#D3F1E4",
   "--btn-outline-border": "#1C3F30",
   "--btn-outline-hover": "rgba(45,174,139,0.12)",
+} as any);
+
+// ——— White light (индиго акцент, нейтральные поверхности)
+const whiteLightVuetify: ThemeDefinition = {
+  dark: false,
+  colors: {
+    background: "#FFFFFF",
+    surface: "#FFFFFF",
+    "surface-variant": "#F6F7FB",
+    primary: "#7C8CF8",
+    "on-primary": "#FFFFFF",
+    secondary: "#A6B4FF",
+    "on-secondary": "#0F1B33",
+    "on-surface": "#1B2333",
+    "on-background": "#111827",
+    info: "#4B94F8",
+    success: "#35B68D",
+    warning: "#F5B64A",
+    error: "#E76A78",
+    outline: "#E5E7EF",
+    "outline-variant": "#EEF0F7",
+    divider: "#00000012",
+  },
 };
+const whiteLightVars = sectionDefaults({
+  "--app-text-color": "#1B2333",
+  "--app-bg-color": "#FFFFFF",
+  "--app-card-bg": "#FFFFFF",
+  "--app-border-color": "#EEF0F7",
+  "--app-bg-image": "none",
+  "--app-bg-size": "cover",
+  "--app-bg-position": "center center",
+  "--app-bg-repeat": "no-repeat",
+  "--app-bg-overlay-color": "rgba(0,0,0,1)",
+  "--app-bg-overlay-opacity": "0",
+  "--app-hover-color": "rgba(17,23,39,0.06)",
+
+  "--app-surface": "#FFFFFF",
+  "--app-surface-backdrop": "#FFFFFF",
+  "--app-surface-2": "#FAFBFF",
+  "--app-surface-3": "#F6F7FB",
+  "--app-surface-variant": "#F6F7FB",
+  "--app-on-surface": "#1B2333",
+  "--app-on-surface-variant": "#495678",
+  "--app-outline": "#E5E7EF",
+  "--app-outline-variant": "#EEF0F7",
+  "--app-divider": "rgba(0,0,0,0.07)",
+  "--app-primary": "#7C8CF8",
+  "--app-on-primary": "#FFFFFF",
+  "--app-secondary": "#A6B4FF",
+  "--app-on-secondary": "#0F1B33",
+  "--app-selected-color": "rgba(124,140,248,0.14)",
+  "--app-pressed-color": "rgba(124,140,248,0.22)",
+  "--app-focus-ring": "color-mix(in oklab, #7C8CF8 60%, transparent)",
+
+  "--btn-primary-bg": "#7C8CF8",
+  "--btn-primary-color": "#FFFFFF",
+  "--btn-tonal-bg": "#F0F2FD",
+  "--btn-tonal-color": "#1B2333",
+  "--btn-outline-border": "#E5E7EF",
+  "--btn-outline-hover": "rgba(17,23,39,0.06)",
+} as any);
+
+// ——— Void (чёрный+белый, фиолетовый только для акцентов)
+const voidDarkVuetify: ThemeDefinition = {
+  dark: true,
+  colors: {
+    background: "#0B0B0F",
+    surface: "#111116",
+    "surface-variant": "#17171C",
+    primary: "#9D7BFF",
+    "on-primary": "#0E0E12",
+    secondary: "#A6B4FF",
+    "on-surface": "#E6E6F0",
+    "on-background": "#F0F0FA",
+    info: "#7FB7FF",
+    success: "#34D399",
+    warning: "#F59E0B",
+    error: "#F87171",
+    outline: "#232329",
+    "outline-variant": "#1A1A20",
+    divider: "#FFFFFF10",
+  },
+};
+const voidDarkVars = sectionDefaults({
+  "--app-text-color": "#E6E6F0",
+  "--app-bg-color": "#0B0B0F",
+  "--app-card-bg": "#111116",
+  "--app-border-color": "#1A1A20",
+  "--app-bg-image": "none",
+  "--app-bg-size": "cover",
+  "--app-bg-position": "center center",
+  "--app-bg-repeat": "no-repeat",
+  "--app-bg-overlay-color": "rgba(0,0,0,1)",
+  "--app-bg-overlay-opacity": "0",
+  "--app-hover-color": "rgba(255,255,255,0.06)",
+
+  "--app-surface": "#111116",
+  "--app-surface-backdrop": "#111116",
+  "--app-surface-2": "#14141A",
+  "--app-surface-3": "#17171C",
+  "--app-surface-variant": "#17171C",
+  "--app-on-surface": "#E6E6F0",
+  "--app-on-surface-variant": "#B8B8CC",
+  "--app-outline": "#232329",
+  "--app-outline-variant": "#1A1A20",
+  "--app-divider": "rgba(255,255,255,0.07)",
+  "--app-primary": "#9D7BFF",
+  "--app-on-primary": "#0E0E12",
+  "--app-secondary": "#A6B4FF",
+  "--app-on-secondary": "#0E0E12",
+  "--app-selected-color": "rgba(255,255,255,0.09)",
+  "--app-pressed-color": "rgba(255,255,255,0.14)",
+  "--app-focus-ring": "color-mix(in oklab, #9D7BFF 60%, transparent)",
+
+  "--btn-primary-bg": "#9D7BFF",
+  "--btn-primary-color": "#0E0E12",
+  "--btn-tonal-bg": "#17171C",
+  "--btn-tonal-color": "#E6E6F0",
+  "--btn-outline-border": "#232329",
+  "--btn-outline-hover": "rgba(255,255,255,0.06)",
+} as any);
 
 // РЕЕСТР
 export const systemVuetify: Record<SystemTheme, ThemeDefinition> = {
@@ -537,8 +719,8 @@ export const systemVuetify: Record<SystemTheme, ThemeDefinition> = {
   clouds: blueLightVuetify,
   lime: greenLightVuetify,
   hacker: greenDarkVuetify,
-  white: whiteLightVuetify, // new
-  void: voidDarkVuetify, // new
+  white: whiteLightVuetify,
+  void: voidDarkVuetify,
 };
 
 export const systemVars: Record<SystemTheme, CssVars> = {
@@ -548,8 +730,8 @@ export const systemVars: Record<SystemTheme, CssVars> = {
   clouds: blueLightVars,
   lime: greenLightVars,
   hacker: greenDarkVars,
-  white: whiteLightVars, // new
-  void: voidDarkVars, // new
+  white: whiteLightVars,
+  void: voidDarkVars,
 };
 
 // Для обратной совместимости:

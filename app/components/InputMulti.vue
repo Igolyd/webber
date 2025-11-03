@@ -252,9 +252,9 @@
 
           <!-- Отправка -->
           <v-btn
-            color="primary"
+            class="btn-primary-tonal"
             size="small"
-            variant="flat"
+            variant="tonal"
             :disabled="!innerLimited.trim()"
             @click="onSubmit"
           >
@@ -518,14 +518,14 @@ const filteredStickerItems = computed(() => {
 });
 function focusTextarea() {
   // сфокусируем textarea после вставки
-  const el = textareaEl.value
-  if (!el) return
+  const el = textareaEl.value;
+  if (!el) return;
   requestAnimationFrame(() => {
-    el.focus()
+    el.focus();
     // ставим курсор в конец
-    const len = el.value.length
-    el.setSelectionRange(len, len)
-  })
+    const len = el.value.length;
+    el.setSelectionRange(len, len);
+  });
 }
 // Выборы
 function onSystemEmojiPick(e: Emoji) {

@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <v-list class="py-0">
+  <div class="friend-list scope-main">
+    <v-list class="py-0" color="transparent" elevation="0">
       <v-hover
         v-for="friend in friends"
         :key="friend.id"
@@ -32,7 +32,6 @@
         </v-list-item>
       </v-hover>
     </v-list>
-
     <v-dialog v-model="confirmRemoveDialog" max-width="420">
       <v-card>
         <v-card-title>Удалить из друзей?</v-card-title>
@@ -110,3 +109,19 @@ export default defineComponent({
   },
 });
 </script>
+<style scoped>
+.friend-list {
+  background: transparent !important;
+}
+
+/* Список — прозрачный, наследует цвет */
+:deep(.v-list) {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Hover */
+:deep(.v-list-item:hover) {
+  background: color-mix(in oklab, currentColor 8%, transparent) !important;
+}
+</style>
