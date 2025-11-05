@@ -58,7 +58,7 @@
                     <v-chip
                       v-if="user.groupTag"
                       size="x-small"
-                      variant="tonal"
+                      variant="outlined"
                       class="ml-2"
                       prepend-icon="mdi-star"
                     >
@@ -116,7 +116,7 @@
                     <v-chip
                       v-if="user.groupTag"
                       size="x-small"
-                      variant="tonal"
+                      variant="outlined"
                       class="ml-2"
                       prepend-icon="mdi-star"
                     >

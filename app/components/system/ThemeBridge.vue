@@ -267,6 +267,7 @@ function applySectionBackdropAndOverrides(data: Required<CustomTheme>) {
     if (key === "lnav") return "--lnav-background";
     if (key === "main") return "--main-background";
     if (key === "topnav") return "--topnav-background";
+    if (key === "input") return "--input-background"; // NEW
     // для остальных секций остаётся surface
     return `--${key}-surface`;
   };
@@ -289,7 +290,8 @@ function applySectionBackdropAndOverrides(data: Required<CustomTheme>) {
     "composer",
     "dialog",
     "menu",
-    "mymini", // NEW
+    "mymini",
+    "input", // NEW
   ] as const;
 
   for (const key of sectionKeys) {

@@ -15,7 +15,8 @@ type SectionKey =
   | "composer"
   | "dialog"
   | "menu"
-  | "mymini"; // NEW
+  | "mymini"
+  | "input"; // NEW
 type SectionOverride = Partial<{
   enabled: boolean;
   surface: string;
@@ -222,6 +223,7 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
     const dialog = S.dialog?.enabled ? S.dialog : undefined;
     const menu = S.menu?.enabled ? S.menu : undefined;
     const mymini = S.mymini?.enabled ? S.mymini : undefined;
+    const input = S.input?.enabled ? S.input : undefined;
     const vars: CssVars = {
       "--app-text-color": textColor.value,
       "--app-bg-color": baseBgColor,
@@ -312,6 +314,12 @@ export const useCustomThemeStore = defineStore("customTheme", () => {
       "--mymini-border": pick(mymini, "border", baseBorder),
       "--mymini-hover": pick(mymini, "hover", baseHover),
       "--mymini-elev-1": pick(mymini, "elev1", baseElev1),
+      // NEW: input (просвечивает при image/gradient)
+      "--input-background": secSurf(pick(input, "surface", baseSurface)),
+      "--input-on-surface": pick(input, "onSurface", baseOnSurface),
+      "--input-border": pick(input, "border", baseBorder),
+      "--input-hover": pick(input, "hover", baseHover),
+      "--input-elev-1": pick(input, "elev1", baseElev1),
     } as CssVars;
 
     return vars;

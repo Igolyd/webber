@@ -15,7 +15,7 @@
 
         <v-divider class="my-3" />
 
-        <v-list v-if="results.length">
+        <v-list v-if="results.length" color="transparent">
           <v-list-item
             v-for="u in results"
             :key="u.id"

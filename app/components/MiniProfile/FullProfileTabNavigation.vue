@@ -73,8 +73,13 @@
             activator="parent"
             location="bottom"
             :close-on-content-click="true"
+            content-class="menu-scope"
           >
-            <v-list density="compact" style="min-width: 220px">
+            <v-list
+              density="compact"
+              color="transparent"
+              style="min-width: 220px"
+            >
               <v-list-subheader>Статус в сети</v-list-subheader>
               <v-list-item
                 v-for="s in statuses"

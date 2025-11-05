@@ -5,7 +5,7 @@
     permanent
     :height="drawerHeight"
     :width="drawerHeight"
-    class="input-multi"
+    class="input-multi scope-input"
   >
     <div class="wrap">
       <v-row class="align-center" no-gutters>
@@ -254,7 +254,7 @@
           <v-btn
             class="btn-primary-tonal"
             size="small"
-            variant="tonal"
+            variant="plain"
             :disabled="!innerLimited.trim()"
             @click="onSubmit"
           >
@@ -581,11 +581,35 @@ function onSubmit() {
 </script>
 
 <style scoped>
-.input-multi {
-  border-top: 1px solid var(--app-border-color);
-  overflow: hidden !important;
+/* Секция input: подключаем токены */
+.scope-input {
+  --v-theme-surface: var(--input-background);
+  --v-theme-on-surface: var(--input-on-surface);
+  --v-theme-outline: var(--input-border);
+  --v-theme-surface-variant: var(--input-elev-1);
 }
+
+/* Коробка бара ввода: рисуем слой и не перекрываем картинку */
+.input-multi {
+  position: relative;
+  border-top: 1px solid var(--input-border, var(--app-border-color));
+  overflow: hidden !important;
+  background: transparent !important;
+}
+.input-multi::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--input-background);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Контент поверх слоя — прозрачный */
 .input-multi :deep(.v-navigation-drawer__content) {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
   overflow: hidden !important;
 }
 
@@ -612,22 +636,13 @@ function onSubmit() {
 .input-field :deep(.v-input__control) {
   --v-field-border-width: 0;
 }
-
 .input-field :deep(textarea) {
   padding: 8px 12px !important;
   line-height: 20px !important;
   background: transparent !important;
-  color: var(--app-on-surface) !important;
+  color: var(--input-on-surface, var(--app-on-surface)) !important;
   resize: none !important;
   overflow-y: hidden;
-}
-
-.input-field :deep(textarea)::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-.input-field :deep(textarea) {
-  scrollbar-width: none;
 }
 
 .picker {
@@ -646,7 +661,7 @@ function onSubmit() {
 .pack-row.sticky {
   position: sticky;
   top: 0;
-  background: var(--v-theme-surface);
+  background: color-mix(in oklab, var(--input-background) 100%, transparent);
   z-index: 1;
 }
 .content-area {
@@ -666,12 +681,12 @@ function onSubmit() {
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 8px;
-  background: var(--app-hover-color);
+  background: var(--input-hover, var(--app-hover-color));
+  border: 1px solid var(--input-border, var(--app-border-color));
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  border: 1px solid var(--app-border-color);
 }
 .cell img {
   width: 90%;

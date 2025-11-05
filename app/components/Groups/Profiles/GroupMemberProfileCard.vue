@@ -23,7 +23,7 @@
             <v-chip
               v-bind="props"
               size="small"
-              variant="tonal"
+              variant="plain"
               color="primary"
               class="cursor-pointer text-no-wrap"
               @click="copy(user?.id || '')"
@@ -45,7 +45,7 @@
       </div>
 
       <div class="mt-2 d-flex justify-center" v-if="user?.groupTag">
-        <v-chip size="small" variant="tonal" prepend-icon="mdi-tag">
+        <v-chip size="small" variant="outlined" prepend-icon="mdi-tag">
           {{ user?.groupTag }}
         </v-chip>
       </div>
@@ -82,7 +82,7 @@
         <v-btn
           class="flex-1-1"
           size="small"
-          variant="tonal"
+          variant="outlined"
           prepend-icon="mdi-message-outline"
           @click="$emit('dm', user?.id)"
         >
@@ -91,7 +91,8 @@
         <v-btn
           class="flex-1-1"
           size="small"
-          variant="tonal"
+          variant="outlined"
+          
           prepend-icon="mdi-at"
           @click="$emit('mention', user?.id)"
         >
@@ -100,7 +101,7 @@
       </div>
     </v-card-actions>
 
-    <v-snackbar v-model="copiedSnack" timeout="1400" variant="tonal">
+    <v-snackbar v-model="copiedSnack" timeout="1400" variant="outlined">
       Скопировано
     </v-snackbar>
   </v-card>

@@ -22,6 +22,7 @@
         <v-chip
           v-if="peer.badge"
           :color="peer.badge.color"
+          variant="outlined"
           size="small"
           class="mr-1"
         >
@@ -33,7 +34,10 @@
         <div class="text-body-2">“{{ peer.quote || "—" }}”</div>
 
         <v-divider class="my-3" />
-        <v-btn color="error" variant="tonal" @click="askRemoveFriend(peer.id)"
+        <v-btn
+          color="error"
+          variant="outlined"
+          @click="askRemoveFriend(peer.id)"
           >Удалить из друзей</v-btn
         >
       </div>
@@ -45,17 +49,27 @@
         :height="headerHeight"
         :width="headerHeight"
         absolute
+        color="transparent"
         floating
         elevation="0"
         class="content-header-drawer"
       >
         <div class="content-header">
           <div class="spacer"></div>
-          <v-btn icon :title="'Участники'" aria-label="Участники" @click="$emit('toggle-users')">
+          <v-btn
+            icon
+            :title="'Участники'"
+            aria-label="Участники"
+            @click="$emit('toggle-users')"
+          >
             <v-icon>mdi-account-multiple-outline</v-icon>
           </v-btn>
-          <v-btn icon :title="'Видео-комната'" aria-label="Видео-комната" @click="$emit('toggle-video')"
->
+          <v-btn
+            icon
+            :title="'Видео-комната'"
+            aria-label="Видео-комната"
+            @click="$emit('toggle-video')"
+          >
             <v-icon>mdi-video-outline</v-icon>
           </v-btn>
         </div>

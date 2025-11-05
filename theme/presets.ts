@@ -63,7 +63,6 @@ export type CssVars = {
   "--lnav-elev-1": string;
   "--lnav-bg-color": string;
 
-
   "--main-background": string;
   "--main-on-surface": string;
   "--main-border": string;
@@ -93,7 +92,7 @@ export type CssVars = {
   "--dialog-surface": string;
   "--dialog-on-surface": string;
   "--dialog-border": string;
-  
+
   "--menu-surface": string;
   "--menu-on-surface": string;
   "--menu-border": string;
@@ -104,6 +103,13 @@ export type CssVars = {
   "--mymini-hover": string;
   "--mymini-elev-1": string;
   "--mymini-bg-color": string;
+
+  "--input-background": string;
+  "--input-on-surface": string;
+  "--input-border": string;
+  "--input-hover": string;
+  "--input-elev-1": string;
+  "--input-bg-color": string;
 };
 
 // Хелпер секций для системных тем
@@ -185,7 +191,7 @@ function sectionDefaults(
     "--topnav-on-surface": onSurface,
     "--topnav-border": border,
     "--topnav-hover": hover,
-    "--topnav-elev-1": elev1, 
+    "--topnav-elev-1": elev1,
 
     "--composer-surface": surface,
     "--composer-on-surface": onSurface,
@@ -206,6 +212,13 @@ function sectionDefaults(
     "--mymini-border": border,
     "--mymini-hover": hover,
     "--mymini-elev-1": v["--mymini-bg-color"],
+
+        // NEW: input
+    "--input-background": v["--input-bg-color"] ?? surface,
+    "--input-on-surface": onSurface,
+    "--input-border": border,
+    "--input-hover": hover,
+    "--input-elev-1": elev1,
   } as CssVars;
 }
 
@@ -274,7 +287,7 @@ const violetLightVars = sectionDefaults({
   "--topnav-bg-color": "#FFFFFF", //фон верхней навигации
   "--lnav-bg-color": "#f4ddff", //фон левой навигации
   "--mymini-bg-color": "#F5F1FE",
-
+  "--input-bg-color": "#FFFFFF",
 } as any);
 
 // classic (тёмная уютная фиолетовая)
@@ -337,11 +350,10 @@ const violetDarkVars = sectionDefaults({
   "--btn-outline-hover": "rgba(168,150,230,0.10)",
 
   "--main-bg-color": "#1a1526", //фон основного окна
-  "--topnav-bg-color": "#1a1526", //фон верхней навигации 
+  "--topnav-bg-color": "#1a1526", //фон верхней навигации
   "--lnav-bg-color": "#2C2147", //фон левой навигации
   "--mymini-bg-color": "#332A49",
-
-
+  "--input-bg-color": "#2C2147", //фон поля ввода
 } as any);
 
 // ——— Синие
@@ -406,6 +418,8 @@ const blueLightVars = sectionDefaults({
   "--btn-tonal-color": "#142038",
   "--btn-outline-border": "#D3E3FF",
   "--btn-outline-hover": "rgba(111,169,255,0.10)",
+
+  "--input-bg-color": "#FFFFFF",
 } as any);
 
 const blueDarkVuetify: ThemeDefinition = {
@@ -465,6 +479,8 @@ const blueDarkVars = sectionDefaults({
   "--btn-tonal-color": "#DDE6F7",
   "--btn-outline-border": "#2B3D5F",
   "--btn-outline-hover": "rgba(75,148,248,0.12)",
+
+  "--input-bg-color": "#1A2741",
 } as any);
 
 // ——— Зелёные
@@ -529,6 +545,8 @@ const greenLightVars = sectionDefaults({
   "--btn-tonal-color": "#14281E",
   "--btn-outline-border": "#CDEEDC",
   "--btn-outline-hover": "rgba(71,199,142,0.10)",
+
+  "--input-bg-color": "#FFFFFF",
 } as any);
 
 const greenDarkVuetify: ThemeDefinition = {
@@ -588,6 +606,8 @@ const greenDarkVars = sectionDefaults({
   "--btn-tonal-color": "#D3F1E4",
   "--btn-outline-border": "#1C3F30",
   "--btn-outline-hover": "rgba(45,174,139,0.12)",
+
+  "--input-bg-color": "#153024",
 } as any);
 
 // ——— White light (индиго акцент, нейтральные поверхности)
@@ -649,6 +669,8 @@ const whiteLightVars = sectionDefaults({
   "--btn-tonal-color": "#1B2333",
   "--btn-outline-border": "#E5E7EF",
   "--btn-outline-hover": "rgba(17,23,39,0.06)",
+
+  "--input-bg-color": "#FFFFFF",
 } as any);
 
 // ——— Void (чёрный+белый, фиолетовый только для акцентов)
@@ -709,6 +731,8 @@ const voidDarkVars = sectionDefaults({
   "--btn-tonal-color": "#E6E6F0",
   "--btn-outline-border": "#232329",
   "--btn-outline-hover": "rgba(255,255,255,0.06)",
+
+  "--input-bg-color": "#17171C",
 } as any);
 
 // РЕЕСТР

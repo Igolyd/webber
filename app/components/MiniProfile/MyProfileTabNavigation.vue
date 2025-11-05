@@ -1,5 +1,5 @@
 <template>
-  <div class="my-profile-wrapper">
+  <div class="my-profile-wrapper scope-mymini">
     <v-hover v-slot="{ isHovering, props: hoverProps }">
       <v-card
         v-bind="hoverProps"
@@ -18,7 +18,7 @@
               :close-on-content-click="false"
               :scrim="false"
               transition="scale-transition"
-              content-class="my-profile-menu"
+              content-class="menu-scope my-profile-menu"
             >
               <template #activator="{ props }">
                 <div
@@ -87,8 +87,13 @@
                   v-model="openMicMenu"
                   activator="parent"
                   location="bottom"
+                  content-class="menu-scope"
                 >
-                  <v-list density="compact" style="min-width: 260px">
+                  <v-list
+                    density="compact"
+                    color="transparent"
+                    style="min-width: 260px"
+                  >
                     <v-list-subheader>Микрофон</v-list-subheader>
                     <v-list-item
                       v-for="d in inputDevices"
@@ -130,8 +135,13 @@
                   v-model="openSpkMenu"
                   activator="parent"
                   location="bottom"
+                  content-class="menu-scope"
                 >
-                  <v-list density="compact" style="min-width: 260px">
+                  <v-list
+                    density="compact"
+                    color="transparent"
+                    style="min-width: 260px"
+                  >
                     <v-list-subheader>Динамики</v-list-subheader>
                     <v-list-item
                       v-for="d in outputDevices"
@@ -202,8 +212,13 @@
                     v-model="openCamMenu"
                     activator="parent"
                     location="bottom"
+                    content-class="menu-scope"
                   >
-                    <v-list density="compact" style="min-width: 260px">
+                    <v-list
+                      density="compact"
+                      color="transparent"
+                      style="min-width: 260px"
+                    >
                       <v-list-subheader>Камера</v-list-subheader>
                       <v-list-item
                         v-for="d in videoDevices"
@@ -249,8 +264,9 @@
                     v-model="openShareMenu"
                     activator="parent"
                     location="bottom"
+                    content-class="menu-scope"
                   >
-                    <v-list density="compact">
+                    <v-list density="compact" color="transparent">
                       <v-list-subheader>Качество шэринга</v-list-subheader>
                       <v-list-item @click="toggleSharePreset(1280, 720, 60)"
                         >720p @ 60fps</v-list-item
@@ -421,16 +437,6 @@ export default defineComponent({
   width: 100%;
 }
 
-/* Если используешь флаг для картинки — можно продублировать отключение, но теперь не обязательно */
-.theme-drawer-left.lnav-has-image :deep(.my-profile-wrapper)::before {
-  /* Можно скрыть полностью, если --lnav-layer даёт тинт, а тут не нужен */
-  /* display: none; */
-}
-
-/* Когда у родителя включён режим фон-картинки — убираем подложку, чтобы картинка была видна */
-.theme-drawer-left.lnav-has-image :deep(.my-profile-wrapper)::before {
-  display: none;
-}
 .avatar-cell {
   position: relative;
   display: inline-block;

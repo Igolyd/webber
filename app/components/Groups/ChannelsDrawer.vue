@@ -4,9 +4,8 @@
     :permanent="!isSmAndDown"
     :temporary="isSmAndDown"
     width="360"
-    color="transparent"
-    elevation="0"
     class="theme-drawer-left scope-lnav"
+    :class="{ 'lnav-has-image': lnavHasImage }"
     :scrim="isSmAndDown"
   >
     <div class="px-4 py-2 d-flex align-center justify-space-between">
@@ -25,7 +24,7 @@
       />
     </div>
     <v-divider />
-    <v-list class="py-0" density="comfortable">
+    <v-list  class="py-0" density="comfortable">
       <DirectorySection
         v-for="section in directoriesWithChannels"
         :key="section.dir.id"
@@ -89,6 +88,13 @@ const emit = defineEmits([
   "delete-channel",
   "channel-click",
 ]);
+const lnavHasImage = computed(() => {
+  if (typeof window === "undefined") return false;
+  const cs = getComputedStyle(document.documentElement);
+  const img = cs.getPropertyValue("--app-bg-image").trim();
+  // если есть url(...) или gradient(...), считаем, что фон — картинка/градиент
+  return img && img !== "none";
+});
 const model = computed({
   get: () => props.modelValue,
   set: (v: boolean) => emit("update:modelValue", v),

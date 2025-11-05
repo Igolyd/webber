@@ -56,7 +56,7 @@
       </v-divider>
     </v-card>
 
-    <v-list density="comfortable" class="py-0" color="transparent">
+    <v-list density="comfortable" class="py-0">
       <template v-if="activeCategoryId === 1">
         <NuxtLink
           v-for="group in groupsStore.groups"
@@ -84,6 +84,7 @@
           <v-list-item
             v-bind="hoverProps"
             rounded="lg"
+            :class="{ 'item-has-banner': !!friend.banner && isHovering }"
             :style="friendItemStyle(friend, isHovering)"
             @click="openChat(friend.id)"
             @contextmenu.prevent.stop="openRemoveFriendByContext(friend.id)"

@@ -1,7 +1,11 @@
 <!-- components/Settings/SettingsPanel.vue -->
 <template>
-  <v-navigation-drawer app permanent class="settings-panel">
-    <v-list density="compact">
+  <v-navigation-drawer
+    app
+    permanent
+    class="settings-panel scope-lnav theme-drawer-left"
+  >
+    <v-list density="compact" color="transparent">
       <v-list-subheader>Настройки пользователя</v-list-subheader>
       <v-list-item @click="select('user', 'account')">Аккаунт</v-list-item>
       <v-list-item @click="select('user', 'profiles')">Профиль</v-list-item>
@@ -51,13 +55,11 @@
 
     <!-- Разделитель и кнопка Выйти -->
     <template #append>
-      <v-divider></v-divider>
-      <v-list density="compact">
+      <v-divider />
+      <v-list density="compact" color="transparent">
         <nuxt-link to="/">
           <v-list-item @click="$emit('logout')">
-            <template #prepend>
-              <v-icon>mdi-logout</v-icon>
-            </template>
+            <template #prepend><v-icon>mdi-logout</v-icon></template>
             <v-list-item-title>Выйти</v-list-item-title>
           </v-list-item>
         </nuxt-link>
@@ -101,24 +103,74 @@ export default {
 </script>
 
 <style scoped>
-.settings-panel {
+/* Токены секции (как в AppLeftDrawer) */
+.settings-panel.scope-lnav {
+  --v-theme-surface: var(--lnav-background);
+  --v-theme-on-surface: var(--lnav-on-surface);
+  --v-theme-outline: var(--lnav-border);
+  --v-theme-surface-variant: var(--lnav-elev-1);
+}
+
+/* Коробка Drawer — без прямого фона, рисуем слой ::before */
+.settings-panel.theme-drawer-left {
+  position: relative;
   width: 280px;
-  position: sticky;
   top: 0;
-  background: color-mix(
-    in oklab,
-    var(--lnav-background) 85%,
-    transparent
-  ) !important;
-  backdrop-filter: blur(6px);
+  background: transparent !important;
   color: var(--lnav-on-surface);
   border-right: 1px solid var(--lnav-border);
   border-top: 1px solid var(--lnav-border);
   box-shadow: none !important;
+  backdrop-filter: blur(6px);
 }
+
+/* Подложка секции — смешивается через ThemeBridge и токен --lnav-background */
+.settings-panel.theme-drawer-left::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--lnav-background);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Контент выше подложки и прозрачный */
+.settings-panel :deep(.v-navigation-drawer__content),
+.settings-panel :deep(.v-list),
+.settings-panel :deep(.v-divider) {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  color: var(--lnav-on-surface);
+}
+
+/* Ховер — секционный, с fallback (не глобальный --app-hover-color) */
 .settings-panel :deep(.v-list-item:hover) {
-  background: var(--app-hover-color) !important;
+  background: var(
+    --lnav-hover,
+    color-mix(in oklab, var(--lnav-on-surface) 10%, transparent)
+  ) !important;
 }
+/* отключаем дефолтный цвет overlay, чтобы не мешал */
+.settings-panel :deep(.v-list-item__overlay) {
+  background: transparent !important;
+}
+
+/* рисуем hover через overlay — так делает сам Vuetify */
+.settings-panel :deep(.v-list-item:hover .v-list-item__overlay) {
+  background: var(
+    --lnav-hover,
+    var(--app-hover-color, color-mix(in oklab, var(--lnav-on-surface) 10%, transparent))
+  ) !important;
+  opacity: 1 !important; /* убедимся, что слой видим */
+}
+
+/* для активных пунктов (опционально) */
+.settings-panel :deep(.v-list-item--active .v-list-item__overlay) {
+  background: var(--app-selected-color) !important;
+  opacity: 1 !important;
+}
+/* Подзаголовок — секционный токен */
 .settings-panel :deep(.v-list-subheader) {
   color: var(--app-on-surface-variant);
 }
