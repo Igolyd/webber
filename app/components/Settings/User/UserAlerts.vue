@@ -1,9 +1,10 @@
 <template>
-  <v-container>
-    <h2 class="text-h6 mb-2">Мои алерты</h2>
-    <div class="text-medium-emphasis mb-4">
+  <v-container class="scope-main">
+    <v-card class="main-card">
+      <v-card-title>Мои алерты</v-card-title>
+      <v-card-text>
       Загрузка и управление видео/аудио-алертами (всего: видео ≤10, аудио ≤20)
-    </div>
+    </v-card-text>
     <v-row>
       <v-col cols="12" md="6">
         <h3 class="text-subtitle-1 mb-2">Видео</h3>
@@ -173,6 +174,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    </v-card>
   </v-container>
 </template>
 <script setup lang="ts">
@@ -361,3 +363,19 @@ onBeforeUnmount(() => {
   actions?.clearHandlers();
 });
 </script>
+<style scoped>
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+</style>

@@ -1,9 +1,9 @@
 <!-- components/Settings/User/UserAccount.vue -->
 <template>
-  <v-container class="settings-content-scroll">
+  <v-container class="settings-content-scroll scope-main">
     <v-row>
       <v-col cols="12" md="6">
-        <v-card class="mb-4" title="Профиль (только просмотр)">
+        <v-card class="mb-4 main-card" title="Профиль (только просмотр)">
           <v-card-text>
             <div class="d-flex align-center ga-4">
               <v-avatar size="72">
@@ -29,7 +29,7 @@
           </v-card-text>
         </v-card>
 
-        <v-card title="Уникальное имя" class="mb-4">
+        <v-card title="Уникальное имя" class="mb-4 main-card">
           <v-card-text>
             <FormKit
               ref="usernameFormRef"
@@ -51,7 +51,7 @@
           </v-card-text>
         </v-card>
 
-        <v-card title="Контакты" class="mb-4">
+         <v-card title="Контакты" class="mb-4 main-card">
           <v-card-text>
             <FormKit
               ref="contactsFormRef"
@@ -79,7 +79,7 @@
           </v-card-text>
         </v-card>
 
-        <v-card title="Безопасность" class="mb-4">
+       <v-card title="Безопасность" class="mb-4 main-card">
           <v-card-text>
             <FormKit
               ref="passwordFormRef"
@@ -110,7 +110,7 @@
           </v-card-text>
         </v-card>
 
-        <v-card title="Опасная зона" color="red-lighten-5" class="mb-4">
+         <v-card title="Опасная зона" class="mb-4 main-card" color="red-lighten-5">
           <v-card-text>
             <v-btn color="red" @click="confirmDelete"
               >Удалить учётную запись</v-btn
@@ -285,5 +285,28 @@ export default defineComponent({
 .settings-content-scroll::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+.settings-content-scroll {
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settings-content-scroll {
+  scrollbar-width: none;
 }
 </style>

@@ -30,6 +30,7 @@
                   @keydown.space.prevent="showFullProfile = true"
                 >
                   <div class="avatar-cell">
+                    
                     <!-- Оставляем компактный аватар, BannerAvatar в мини-виде тяжёлый.
                          Баннер полноценно показываем в карточках (напр., GroupMemberProfileCard) -->
                     <v-avatar :size="avatarSize" :rounded="99999">
@@ -123,7 +124,7 @@
                       ? 'btn-primary-tonal'
                       : 'btn-surface-variant'
                   "
-                  variant="text"
+                  variant="outlined"
                   :icon="
                     settings.audioEnabled ? 'mdi-volume-high' : 'mdi-volume-off'
                   "
@@ -414,8 +415,6 @@ export default defineComponent({
 .cursor-pointer {
   cursor: pointer;
 }
-.my-profile-menu {
-}
 .my-profile-wrapper {
   position: relative;
   background: transparent !important;
@@ -441,18 +440,23 @@ export default defineComponent({
   position: relative;
   display: inline-block;
   line-height: 0;
+  /* даём небольшой внутренний отступ под точку, чтобы не “липла” к тексту */
+    overflow: visible; /* на всякий случай */
 }
+
 .mini-status-dot {
   position: absolute;
-  right: -2px;
-  bottom: -2px;
-  width: 12px;
-  height: 12px;
-  border: 2px solid #1f1f1f;
+  right: 0;
+  bottom: 0;
+  margin-bottom: 4%;
+  margin-right: 4%;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
-  transition: background-color 0.18s ease, border-color 0.18s ease,
-    box-shadow 0.18s ease;
+  /* ровное чёрное кольцо (обводка) */
+  box-shadow: 0 0 0 2px #000;
+  z-index: 2;
+  transition: background-color .18s ease, box-shadow .18s ease;
 }
 .st-online {
   background: #3fb950;
@@ -466,4 +470,6 @@ export default defineComponent({
 .st-invisible {
   background: #9aa0a6;
 }
+/* чтобы активатор не резал содержимое, если где-то есть overflow */
+.profile-activator { overflow: visible; }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="friend-list scope-main">
+  <div class="friend-list">
     <v-list class="py-0" color="transparent" elevation="0">
       <v-hover
         v-for="friend in friends"
@@ -122,6 +122,7 @@ export default defineComponent({
 
 /* Hover */
 :deep(.v-list-item:hover) {
-  background: color-mix(in oklab, currentColor 8%, transparent) !important;
+  background-color: var(--lnav-hover);
+
 }
 </style>

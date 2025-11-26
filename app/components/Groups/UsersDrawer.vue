@@ -439,7 +439,6 @@ watch(model, (v) => {
     --rnav-on-surface,
     var(--app-on-surface, var(--v-theme-on-surface))
   );
-  border-left: 1px solid var(--rnav-border, var(--app-outline-variant));
   box-shadow: none !important;
 }
 .role-dot {

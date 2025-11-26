@@ -1,11 +1,11 @@
 <template>
-  <div class="pa-4">
+  <div class="pa-4 scope-main">
     <h2 class="text-h6 mb-2">Мои стикеры</h2>
     <div class="text-medium-emphasis mb-3">
       Создавайте личные наборы стикеров и импортируйте сторонние по уникальному
       имени.
     </div>
-    <v-alert type="info" variant="tonal" class="mb-3">
+    <v-alert type="info" variant="flat" class="mb-3">
       Лимит собственных наборов: {{ limits.USER_OWN_STICKER_PACKS_LIMIT }}. В
       одном паке не более {{ limits.STICKER_LIMIT_PER_PACK }} стикеров.
     </v-alert>
@@ -16,7 +16,7 @@
     </div>
 
     <div class="d-flex flex-wrap gap-3">
-      <v-card class="pa-3" width="420">
+      <v-card class="pa-3 main-card" width="420">
         <div class="text-subtitle-2 mb-2">Создать мой пак</div>
         <v-text-field
           v-model="create.uniqueName"
@@ -32,7 +32,7 @@
           class="mt-2"
         />
         <div class="d-flex align-center gap-2 mt-2">
-          <v-btn size="small" variant="tonal" @click="pickAvatar"
+          <v-btn size="small" variant="outlined" @click="pickAvatar"
             >Аватарка</v-btn
           >
           <input
@@ -56,7 +56,7 @@
         </div>
       </v-card>
 
-      <v-card class="pa-3" width="420">
+      <v-card class="pa-3 main-card" width="420">
         <div class="text-subtitle-2 mb-2">Импорт по уникальному имени</div>
         <v-text-field
           v-model="importName"
@@ -82,7 +82,12 @@
 
     <h3 class="text-subtitle-2 mb-2">Мои пакеты</h3>
     <div class="d-flex flex-wrap gap-2">
-      <v-card v-for="p in ownPacks" :key="p.id" class="pa-2" width="260">
+      <v-card
+        v-for="p in ownPacks"
+        :key="p.id"
+        class="pa-2 main-card"
+        width="260"
+      >
         <div class="d-flex align-center gap-2">
           <v-avatar size="28"><v-img :src="p.avatar" /></v-avatar>
           <div class="text-truncate">
@@ -96,7 +101,7 @@
         <div class="mt-2 d-flex gap-1">
           <v-btn
             size="x-small"
-            variant="tonal"
+            variant="flat"
             @click="openEditor('sticker', p.id)"
             >Заполнить</v-btn
           >
@@ -258,3 +263,19 @@ onMounted(() => {
   });
 });
 </script>
+<style scoped>
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+</style>

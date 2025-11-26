@@ -1,160 +1,228 @@
 <template>
-  <div class="auth-modal">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-body">
-          <form @submit.prevent="submitForm">
-            <div v-if="isRegistering">
-              <h3>Создать учетную запись!</h3>
-              <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" class="form-control" id="email" v-model="email" required />
-              </div>
-              <div class="form-group">
-                <label for="name">Имя:</label>
-                <input type="name" class="form-control" id="name" v-model="name" required />
-              </div>
-              <div class="form-group">
-                <label for="password">Пароль:</label>
-                <input
-                  type="password"
-                  class="form-control"
-                  id="password"
-                  v-model="password"
-                  required
-                />
-              </div>
-            </div>
-            <div v-else>
-              <h3>С возращением!</h3>
-              <div class="form-group">
-                <label for="email">Email:</label>
-                <input type="email" class="form-control" id="email" v-model="email" required />
-              </div>
-              <div class="form-group">
-                <label for="password">Пароль:</label>
-                <input
-                  type="password"
-                  class="form-control"
-                  id="password"
-                  v-model="password"
-                  required
-                />
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary">
-              {{ isRegistering ? 'Зарегистрироваться' : 'Войти' }}
-            </button>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="toggleForm">
-            {{ isRegistering ? 'Уже зарегистрированы?' : 'Еще не зарегистрированы?' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <v-container class="d-flex align-center justify-center fill-height" fluid>
+    <v-card max-width="480" class="pa-6" elevation="6">
+      <v-card-title class="text-h5 text-center justify-center">
+        {{ isRegistering ? "Регистрация" : "Авторизация" }}
+      </v-card-title>
+
+      <v-card-text>
+        <!-- Форма ЛОГИНА -->
+        <FormKit
+          v-if="!isRegistering"
+          type="form"
+          :actions="false"
+          @submit="handleLogin"
+        >
+          <FormKit
+            type="text"
+            name="login"
+            label="Логин / Email"
+            validation="required"
+            validation-label="Логин"
+            placeholder="Введите логин или email"
+          />
+
+          <FormKit
+            type="password"
+            name="password"
+            label="Пароль"
+            validation="required"
+            validation-label="Пароль"
+            placeholder="Введите пароль"
+          />
+
+          <v-alert v-if="error" type="error" variant="tonal" class="mb-3">
+            {{ error }}
+          </v-alert>
+
+          <v-btn type="submit" color="primary" block :loading="loading">
+            Войти
+          </v-btn>
+        </FormKit>
+
+        <!-- Форма РЕГИСТРАЦИИ -->
+        <FormKit v-else type="form" :actions="false" @submit="handleRegister">
+          <FormKit
+            type="text"
+            name="Username"
+            label="Логин"
+            validation="required"
+            validation-label="Логин"
+            placeholder="Придумайте логин"
+          />
+
+          <FormKit
+            type="email"
+            name="Email"
+            label="Email"
+            validation="required|email"
+            validation-label="Email"
+            placeholder="Введите email"
+          />
+
+          <FormKit
+            type="password"
+            name="Password"
+            label="Пароль"
+            validation="required"
+            validation-label="Пароль"
+            placeholder="Придумайте пароль"
+          />
+
+          <FormKit
+            type="text"
+            name="FirstName"
+            label="Имя"
+            validation="required"
+            validation-label="Имя"
+            placeholder="Введите имя"
+          />
+
+          <FormKit
+            type="text"
+            name="LastName"
+            label="Фамилия"
+            validation="required"
+            validation-label="Фамилия"
+            placeholder="Введите фамилию"
+          />
+
+          <FormKit
+            type="text"
+            name="Role"
+            label="Роль"
+            placeholder="Например: Admin, User"
+            help="Если у вас фиксированные роли, можно сделать select."
+          />
+
+          <FormKit
+            type="tel"
+            name="Phone"
+            label="Телефон"
+            placeholder="Введите телефон"
+          />
+
+          <v-alert v-if="error" type="error" variant="tonal" class="mb-3">
+            {{ error }}
+          </v-alert>
+
+          <v-btn type="submit" color="primary" block :loading="loading">
+            Зарегистрироваться
+          </v-btn>
+        </FormKit>
+      </v-card-text>
+
+      <v-card-actions class="justify-center mt-4">
+        <v-btn variant="text" @click="toggleForm">
+          {{
+            isRegistering
+              ? "Уже зарегистрированы? Войти"
+              : "Еще нет аккаунта? Зарегистрироваться"
+          }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-container>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      isRegistering: true,
-      email: '',
-      password: '',
-      modalTitle: 'Авторизация',
-    }
-  },
-  methods: {
-    submitForm() {
-      if (this.isRegistering) {
-        // Handle registration logic here
-      } else {
-        // Handle authorization logic here
+<script setup lang="ts">
+const isRegistering = ref(false);
+const loading = ref(false);
+const error = ref("");
+const config = useRuntimeConfig();
+// Переключение между формой логина и регистрации
+const toggleForm = () => {
+  error.value = "";
+  isRegistering.value = !isRegistering.value;
+};
+
+/**
+ * Авторизация
+ * Формат API: http://api.gentvin.shinegold.ru/gateway/auth?login=admin&password=admin
+ * values = { login: string, password: string } — приходит из FormKit
+ */
+const handleLogin = async (values: { login: string; password: string }) => {
+  loading.value = true;
+  error.value = "";
+
+  try {
+    const res = await $fetch(`${config.public.publicApiBase}/gateway/auth`, {
+      method: "GET",
+      params: {
+        login: values.login,
+        password: values.password,
+      },
+    });
+
+    // TODO: обработать ответ (сохранить токен, редирект и т.д.)
+    console.log("Login response:", res);
+  } catch (err: any) {
+    error.value = err?.data?.message || "Ошибка при авторизации";
+  } finally {
+    loading.value = false;
+  }
+};
+
+/**
+ * Регистрация
+ * Формат API:
+ * http://api.gentvin.shinegold.ru/Register
+ *   ?Username=gavrilov
+ *   &Email=gafden719@gmail.com
+ *   &Password=gamer404
+ *   &FirstName=Гаврилов
+ *   &LastName=Данил
+ *   &Role=Admin
+ *   &Phone=321323213
+ *
+ * values приходят из FormKit, имена совпадают с параметрами API.
+ */
+type RegisterValues = {
+  Username: string;
+  Email: string;
+  Password: string;
+  FirstName: string;
+  LastName: string;
+  Role?: string;
+  Phone?: string;
+};
+
+const handleRegister = async (values: RegisterValues) => {
+  loading.value = true;
+  error.value = "";
+
+  try {
+    const res = await $fetch(
+      `${config.public.publicApiBase}/gateway/auth/users/register`,
+      {
+        method: "POST",
+        params: {
+          Username: values.Username,
+          Email: values.Email,
+          Password: values.Password,
+          FirstName: values.FirstName,
+          LastName: values.LastName,
+          Role: values.Role || "User",
+          Phone: values.Phone || "",
+        },
       }
-    },
-    toggleForm() {
-      this.isRegistering = !this.isRegistering
-      this.modalTitle = this.isRegistering ? 'Регистрация' : 'Авторизация'
-    },
-    closeModal() {
-      // Close the modal window
-    },
-  },
-}
+    );
+
+    // TODO: обработать ответ (уведомление, автоматический логин, редирект и т.п.)
+    console.log("Register response:", res);
+
+    // Например, после успешной регистрации сразу переключаемся на форму логина
+    isRegistering.value = false;
+  } catch (err: any) {
+    error.value = err?.data?.message || "Ошибка при регистрации";
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <style scoped>
-.auth-modal {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-dialog {
-  margin: 0 auto;
-  width: 30%;
-  height: 30%;
-  margin-bottom: 10%;
-}
-
-.modal-content {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-  border-bottom: 1px solid #ddd;
-}
-
-.modal-title {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-footer {
-  border-top: 1px solid #ddd;
-  padding: 10px;
-}
-
-.close {
-  cursor: pointer;
-}
-
-label {
-  display: block;
-}
-
-input[type='email'],
-input[type='password'],
-input[type='name'] {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 20px;
-  border: 1px solid #ccc;
-}
-
-button[type='submit'] {
-  width: 100%;
-  padding: 10px;
-  background-color: #4caf50;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.fill-height {
+  min-height: 100vh;
 }
 </style>

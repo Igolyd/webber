@@ -5,9 +5,8 @@
     :permanent="!isSmAndDown"
     :temporary="isSmAndDown"
     :width="width"
-    class="theme-drawer-left scope-lnav"
+    class="theme-drawer-left"
     :class="{ 'lnav-has-image': lnavHasImage }"
-    app
   >
     <v-card elevation="0" color="transparent" class="px-4 pt-4 pb-2">
       <div class="toolbar-header">
@@ -305,14 +304,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Токены секции (оставляем) */
-.scope-lnav {
-  --v-theme-surface: var(--lnav-background);
-  --v-theme-on-surface: var(--lnav-on-surface);
-  --v-theme-outline: var(--lnav-border);
-  --v-theme-surface-variant: var(--lnav-elev-1);
-}
-
 /* Коробка Drawer — рисуем подложечный слой тут */
 .theme-drawer-left {
   position: relative;
@@ -339,22 +330,7 @@ export default defineComponent({
 /* Контент Drawer — прозрачный и выше слоя */
 .theme-drawer-left :deep(.v-navigation-drawer__content),
 .theme-drawer-left :deep(.v-card),
-.theme-drawer-left :deep(.v-navigation-drawer__append),
-:deep(.v-list) {
-  position: relative;
-  z-index: 1;
-  background: transparent !important;
-  color: var(--lnav-on-surface);
-}
 
-/* Hover и прочее — как было */
-:deep(.v-list-item:hover) {
-  background: color-mix(
-    in oklab,
-    var(--lnav-on-surface) 10%,
-    transparent
-  ) !important;
-}
 .toolbar-header {
   display: flex;
   flex-direction: column;

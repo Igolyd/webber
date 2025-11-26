@@ -1,9 +1,9 @@
 <!-- components/GroupsSettings/GroupProfile.vue -->
 <template>
-  <v-container>
+  <v-container class="scope-main">
     <h2 class="text-h6 mb-4">Профиль группы</h2>
 
-    <v-card>
+    <v-card class="main-card">
       <v-card-text>
         <FormKit type="form" submit-label="Сохранить" @submit="saveMain">
           <v-row>
@@ -426,3 +426,20 @@ async function saveMain(values: any) {
   return res;
 }
 </script>
+<style scoped>
+/* Маппинг секции main */
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+</style>

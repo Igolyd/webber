@@ -1,5 +1,5 @@
 <template>
-  <div class="content-area">
+  <div class="content-area rounded-te-lg">
     <v-navigation-drawer
       location="top"
       :model-value="true"
@@ -9,7 +9,7 @@
       floating
       elevation="0"
       color="transparent"
-      class="content-header-drawer scope-hdr"
+      class="content-header-drawer scope-hdr rounded-te-lg"
     >
       <div class="content-header">
         <h2 class="text-h6"># {{ activeTextChannelName }}</h2>
@@ -63,6 +63,9 @@ const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
   --v-theme-on-surface: var(--topnav-on-surface);
   --v-theme-outline: var(--topnav-border);
   --v-theme-surface-variant: var(--topnav-elev-1);
+}
+.content-area{
+  border: 0px;
 }
 .content-header-drawer {
   border-bottom: 1px solid var(--topnav-border, var(--app-outline-variant));

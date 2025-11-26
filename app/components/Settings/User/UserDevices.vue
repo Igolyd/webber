@@ -1,7 +1,7 @@
 <!-- components/Settings/User/UserDevices.vue -->
 <template>
-  <v-container>
-    <v-card>
+  <v-container class="scope-main">
+    <v-card class="main-card">
       <v-card-title class="d-flex justify-space-between">
         <span>Активные сессии</span>
         <v-btn color="primary" @click="fetch">Обновить</v-btn>
@@ -12,7 +12,7 @@
             <v-list-item-title>{{ s.device }}</v-list-item-title>
             <v-list-item-subtitle>Последняя активность: {{ s.lastActive }}</v-list-item-subtitle>
             <template #append>
-              <v-chip size="small" v-if="s.current">Текущая</v-chip>
+              <v-chip variant="flat" size="small" v-if="s.current">Текущая</v-chip>
             </template>
           </v-list-item>
         </v-list>
@@ -34,3 +34,19 @@ export default defineComponent({
   },
 })
 </script>
+<style scoped>
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+</style>

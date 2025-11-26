@@ -1,6 +1,6 @@
 <template>
-  <v-container>
-    <v-card>
+  <v-container class="scope-main">
+    <v-card class="main-card">
       <v-card-title>Заблокированные пользователи</v-card-title>
       <v-card-text>
         <v-list v-if="blocked.length">
@@ -29,8 +29,28 @@ export default defineComponent({
   setup() {
     const comm = useCommunicationStore()
     function unblock(id: string) { comm.unblock(id) }
-    function openProfile(id: string) { /* TODO: переход к профилю пользователя */ }
-    return { blocked: comm.blockedUsers, unblock, openProfile, dfAvatar }
+    function openProfile(id: string) { /* TODO */ }
+    // rename для шаблона:
+    const defaultAvatar = dfAvatar
+    return { blocked: comm.blockedUsers, unblock, openProfile, defaultAvatar }
   },
 })
 </script>
+
+<style scoped>
+/* Маппинг секции main */
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+</style>

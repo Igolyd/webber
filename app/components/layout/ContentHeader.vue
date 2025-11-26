@@ -10,7 +10,7 @@
     elevation="0"
     rounded="0"
     color="transparent"
-    class="content-header-drawer scope-hdr"
+    class="content-header-drawer scope-hdr rounded-te-lg"
   >
     <div class="content-header" color="transparent" elevation="0">
       <v-btn
@@ -76,7 +76,10 @@ export default defineComponent({
 .content-header-drawer {
   border-top: 1px solid var(--topnav-border, var(--app-outline-variant));
   border-right: 1px solid var(--topnav-border, var(--app-outline-variant));
-  background: var(--topnav-elev-1, var(--topnav-background, var(--app-surface)));
+  background: var(
+    --topnav-elev-1,
+    var(--topnav-background, var(--app-surface))
+  );
 }
 .scope-hdr {
   --v-theme-surface: var(--topnav-background);

@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  nuxt-app:
+    build: .
+    container_name: nuxt-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      # Пример, если будете использовать runtimeConfig.public.apiBase
+      # NUXT_PUBLIC_API_BASE: "http://api.gentvin.shinegold.ru"

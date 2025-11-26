@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="h-100 d-flex pa-0">
+  <v-container fluid class="h-100 d-flex pa-0 ">
     <SmallNavigationTab
       :groups="groupsList"
       :selectedGroupId="activeGroupId"

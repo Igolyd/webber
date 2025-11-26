@@ -4,7 +4,7 @@
     :permanent="!isSmAndDown"
     :temporary="isSmAndDown"
     width="360"
-    class="theme-drawer-left scope-lnav"
+    class="theme-drawer-left scope-lnav rounded-ts-lg"
     :class="{ 'lnav-has-image': lnavHasImage }"
     :scrim="isSmAndDown"
   >

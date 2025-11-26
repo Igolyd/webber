@@ -2,11 +2,22 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-
+  runtimeConfig: {
+    // Только на сервере
+    apiBase: 'https://api.gentvin.shinegold.ru',
+    public: {
+      // Доступно и на клиенте
+      publicApiBase: 'https://api.gentvin.shinegold.ru',
+    },
+  },
   future: {
     compatibilityVersion: 4
   },
-
+  nitro: {
+    externals: {
+      inline: ['tailwindcss', 'tailwindcss/colors'],
+    },
+  },
   modules: [
     '@nuxt/eslint',
     '@nuxt/image',

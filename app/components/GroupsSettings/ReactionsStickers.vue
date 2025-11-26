@@ -1,16 +1,16 @@
 <template>
-  <div class="pa-4">
+  <div class="pa-4 scope-main">
     <h2 class="text-h6 mb-2">Стикеры</h2>
     <div class="text-medium-emphasis mb-3">
       Собственные стикер-паки группы + подключение сторонних по уникальному
       имени.
     </div>
-    <v-alert type="info" variant="tonal" class="mb-3">
+    <v-alert type="info" variant="flat" class="mb-3">
       В паке не более {{ limits.STICKER_LIMIT_PER_PACK }} стикеров.
     </v-alert>
 
     <div class="d-flex flex-wrap gap-3">
-      <v-card class="pa-3" width="420">
+      <v-card class="pa-3 main-card" width="420">
         <div class="text-subtitle-2 mb-2">Создать пак</div>
         <v-text-field
           v-model="create.uniqueName"
@@ -26,7 +26,7 @@
           class="mt-2"
         />
         <div class="d-flex align-center gap-2 mt-2">
-          <v-btn size="small" variant="tonal" @click="pickAvatar"
+          <v-btn size="small" variant="flat" @click="pickAvatar"
             >Аватарка</v-btn
           >
           <input
@@ -50,7 +50,7 @@
         </div>
       </v-card>
 
-      <v-card class="pa-3" width="420">
+      <v-card class="pa-3 main-card" width="420">
         <div class="text-subtitle-2 mb-2">Подключить пак по имени</div>
         <v-text-field
           v-model="importName"
@@ -75,7 +75,12 @@
 
     <h3 class="text-subtitle-2 mb-2">Паки группы</h3>
     <div class="d-flex flex-wrap gap-2">
-      <v-card v-for="p in ownPacks" :key="p.id" class="pa-2" width="240">
+      <v-card
+        v-for="p in ownPacks"
+        :key="p.id"
+        class="pa-2 main-card"
+        width="240"
+      >
         <div class="d-flex align-center gap-2">
           <v-avatar size="28"><v-img :src="p.avatar" /></v-avatar>
           <div class="text-truncate">
@@ -85,9 +90,9 @@
             >
           </div>
         </div>
-        <div class="text-caption mt-1">Стикеров: {{ (p.itemsCount|| 0) }}</div>
+        <div class="text-caption mt-1">Стикеров: {{ p.itemsCount || 0 }}</div>
         <div class="mt-2 d-flex gap-1">
-          <v-btn size="x-small" variant="tonal" @click="addItems(p.id)"
+          <v-btn size="x-small" variant="flat" @click="addItems(p.id)"
             >Добавить стикеры</v-btn
           >
           <v-btn
@@ -253,3 +258,20 @@ function onUnlink(uname: string) {
   reactions.unlinkPackFromGroup(gid.value, "sticker", uname);
 }
 </script>
+<style scoped>
+/* Маппинг секции main */
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+</style>

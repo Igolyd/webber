@@ -1,14 +1,14 @@
 <!-- components/Settings/User/UserProfiles.vue -->
 <template>
-  <v-container>
+  <v-container >
     <v-tabs v-model="tab" grow>
       <v-tab value="main">Основной профиль</v-tab>
       <v-tab value="group-personal">Личный профиль группы</v-tab>
     </v-tabs>
 
-    <v-window v-model="tab" class="mt-4">
+    <v-window v-model="tab" class="mt-4 scope-main" >
       <v-window-item value="main">
-        <v-card>
+        <v-card class="main-card">
           <v-card-text>
             <FormKit
               type="form"
@@ -190,10 +190,10 @@
       </v-window-item>
 
       <v-window-item value="group-personal">
-        <v-card>
-          <v-card-text
-            >Раздел «Личный профиль группы» — пока пустой.</v-card-text
-          >
+        <v-card class="main-card" variant="outlined">
+          <v-card-text>
+            Раздел «Личный профиль группы» — пока пустой.
+          </v-card-text>
         </v-card>
       </v-window-item>
     </v-window>
@@ -635,3 +635,28 @@ onBeforeUnmount(() => {
   actions?.clearHandlers();
 });
 </script>
+<style scoped>
+/* Секция main: прокидываем секционные токены в локальную тему Vuetify */
+.scope-main {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+/* Карточка использует фон/бордеры из main */
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+/* При необходимости можно подсветить hover на внутренних списках/элементах
+:deep(.v-list-item:hover) {
+  background: var(--main-hover);
+}
+*/
+</style>

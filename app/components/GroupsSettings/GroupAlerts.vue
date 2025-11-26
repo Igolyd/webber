@@ -1,5 +1,5 @@
 <template>
-  <div class="pa-4">
+  <div class="pa-4 scope-main">
     <h2 class="text-h6 mb-2">Алерты группы</h2>
     <p class="text-medium-emphasis mb-4">
       Управляйте библиотекой видео/аудио-алертов, которые доступны участникам
@@ -14,7 +14,7 @@
           <v-card
             v-for="a in groupVideo"
             :key="a.id"
-            class="pa-2 elevation-1"
+            class="pa-2 elevation-1 main-card"
             style="width: 180px"
           >
             <v-img :src="a.poster" height="90" cover class="mb-2 rounded" />
@@ -51,7 +51,7 @@
           <v-card
             v-for="a in groupAudio"
             :key="a.id"
-            class="pa-2 elevation-1"
+            class="pa-2 elevation-1 main-card"
             style="width: 180px"
           >
             <v-icon class="mb-2">mdi-music</v-icon>
@@ -158,3 +158,20 @@ function read(file: File) {
   });
 }
 </script>
+<style scoped>
+/* Маппинг секции main */
+.scope-main {
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+  color: var(--main-on-surface);
+}
+.main-card {
+  background: var(--main-background) !important;
+  color: var(--main-on-surface) !important;
+  border: 1px solid var(--main-border) !important;
+  box-shadow: none;
+  border-radius: 12px;
+}
+</style>

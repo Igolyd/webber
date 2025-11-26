@@ -4,7 +4,7 @@
     app
     permanent
     color="grey-lighten-3"
-    class="group-settings-panel"
+    class="group-settings-panel scope-lnav"
   >
     <v-list density="compact">
       <v-list-subheader>Настройки группы</v-list-subheader>
@@ -107,5 +107,14 @@ const backUrl = computed(() => `/groups/${route.params.id}`);
   width: 280px;
   position: sticky;
   top: 0;
+}
+.scope-lnav {
+  --v-theme-surface: var(--lnav-surface);
+  --v-theme-on-surface: var(--lnav-on-surface);
+  --v-theme-outline: var(--lnav-border);
+  --v-theme-surface-variant: var(--lnav-elev-1);
+  background: var(--lnav-surface) !important;
+  color: var(--lnav-on-surface) !important;
+  border-right: 1px solid var(--lnav-border) !important;
 }
 </style>

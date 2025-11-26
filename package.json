@@ -31,6 +31,7 @@
     "@vueuse/integrations": "^13.9.0",
     "eslint": "^9.34.0",
     "idb-keyval": "^6.2.2",
+    "ipx": "^3.1.1",
     "janus-simple-videoroom-client": "^2.1.0",
     "nuxt": "^3.18.1",
     "pinia": "^3.0.3",
