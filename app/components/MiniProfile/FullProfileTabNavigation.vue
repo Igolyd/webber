@@ -1,17 +1,19 @@
 <template>
   <v-card class="profile-card" elevation="10">
     <v-card-title class="pa-0">
-      <BannerAvatar
-        :src="avatar || defaultAvatar"
-        :fallback="defaultAvatar"
-        :banner="banner || ''"
-        :banner-color="bannerColor || defaultBanner"
-        :overlay-color="bannerOverlayColor"
-        :overlay-opacity="bannerOverlayOpacity"
-        :size="avatarSize"
-        :show-status="true"
-        :status="status"
-      />
+      <div class="avatar-click-wrapper" @click="$emit('openWinProfile')">
+        <BannerAvatar
+          :src="avatar || defaultAvatar"
+          :fallback="defaultAvatar"
+          :banner="banner || ''"
+          :banner-color="bannerColor || defaultBanner"
+          :overlay-color="bannerOverlayColor"
+          :overlay-opacity="bannerOverlayOpacity"
+          :size="avatarSize"
+          :show-status="true"
+          :status="status"
+        />
+      </div>
     </v-card-title>
 
     <v-card-text class="pt-1 px-4">
@@ -156,6 +158,7 @@ type StatusVal = "online" | "idle" | "dnd" | "invisible";
 export default defineComponent({
   name: "FullProfileTabNavigation",
   components: { BannerAvatar },
+  emits: ["openWinProfile"], // ← добавили
   setup() {
     const display = useDisplay();
     const btnDensity = computed(() =>
@@ -240,12 +243,8 @@ export default defineComponent({
       copiedSnack.value = true;
     }
 
-    function onEditProfile() {
-      /* роутинг сделаешь сам */
-    }
-    function onSwitchAccounts() {
-      /* no-op */
-    }
+    function onEditProfile() {}
+    function onSwitchAccounts() {}
 
     return {
       avatar,
@@ -286,6 +285,9 @@ export default defineComponent({
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+.avatar-click-wrapper {
+  cursor: pointer;
 }
 
 .quote {

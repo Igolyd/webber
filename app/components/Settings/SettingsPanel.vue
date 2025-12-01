@@ -60,7 +60,7 @@
         <nuxt-link to="/">
           <v-list-item @click="$emit('logout')">
             <template #prepend><v-icon>mdi-logout</v-icon></template>
-            <v-list-item-title>Выйти</v-list-item-title>
+            <v-list-item-title>Назад</v-list-item-title>
           </v-list-item>
         </nuxt-link>
       </v-list>

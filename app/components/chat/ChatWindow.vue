@@ -1382,6 +1382,9 @@ function onCopiedFromPreview() {
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: calc(100vh - 280px);
+  height: 100%;
+  overflow: hidden; /* чтобы внешний контейнер не скроллился */
 }
 .pinned-bar {
   display: flex;
@@ -1396,10 +1399,21 @@ function onCopiedFromPreview() {
 }
 .messages-scroll {
   flex: 1 1 auto;
-  overflow: auto;
   padding: 8px;
   padding-top: 0;
   background: transparent;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Скрыть скроллбар, но оставить прокрутку */
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.messages-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 .messages-list {
   background: transparent;

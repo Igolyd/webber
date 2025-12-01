@@ -7,7 +7,6 @@
       :style="itemStyle"
       @pointerdown="onPointerDown"
     >
-
       <template v-if="alert.asset.kind === 'video'">
         <video
           ref="videoRef"
@@ -34,6 +33,7 @@
           @ended="onRequestDismiss"
           @loadedmetadata="setupAutoCloseFromMeta"
           @contextmenu.prevent
+          @error="(e) => console.error('ALERT AUDIO ERROR', e, audioRef?.error)"
         />
       </template>
 
@@ -54,9 +54,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed, watch, nextTick } from "vue";
+import {
+  onMounted,
+  onBeforeUnmount,
+  ref,
+  computed,
+  watch,
+  nextTick,
+} from "vue";
 import { useRouter } from "vue-router";
-import { useUserAlertsSettingsStore, useAlertsRuntimeStore, type PlayMode, type IncomingAlert } from "@/stores/alerts";
+import {
+  useUserAlertsSettingsStore,
+  useAlertsRuntimeStore,
+  type PlayMode,
+  type IncomingAlert,
+} from "@/stores/alerts";
 
 const props = defineProps<{ alert: IncomingAlert; index: number }>();
 const emit = defineEmits<{ (e: "dismiss"): void }>();
@@ -73,24 +85,38 @@ const router = useRouter();
 const playMode = computed<PlayMode>(() => settings.playMode);
 
 // dataUrl (IndexedDB -> dataUrl)
-const dataUrl = computed(() => runtime.getAssetUrl(props.alert.asset));
+const dataUrl = computed(() => {
+  const url = runtime.getAssetUrl(props.alert.asset);
+  console.log(
+    "[Overlay] asset",
+    props.alert.asset.id,
+    "mime =",
+    props.alert.asset.mime,
+    "url =",
+    url?.slice?.(0, 60)
+  );
+  return url;
+});
 
 // Позиция
 const pos = ref<{ x: number; y: number }>({ x: 16, y: 16 });
 
-const itemStyle = computed(() => ({
-  position: "absolute",
-  left: pos.value.x + "px",
-  top: pos.value.y + "px",
-  background: "rgba(20,20,20,0.92)",
-  borderRadius: "12px",
-  color: "#fff",
-  width: "min(360px, 90vw)",
-  padding: "8px",
-  boxShadow: "0 6px 24px rgba(0,0,0,0.4)",
-  pointerEvents: "auto",
-  touchAction: "none",
-}) as Record<string, string>);
+const itemStyle = computed(
+  () =>
+    ({
+      position: "absolute",
+      left: pos.value.x + "px",
+      top: pos.value.y + "px",
+      background: "rgba(20,20,20,0.92)",
+      borderRadius: "12px",
+      color: "#fff",
+      width: "min(360px, 90vw)",
+      padding: "8px",
+      boxShadow: "0 6px 24px rgba(0,0,0,0.4)",
+      pointerEvents: "auto",
+      touchAction: "none",
+    } as Record<string, string>)
+);
 
 let closeTimer: number | null = null;
 let pipRequested = false;
@@ -110,7 +136,8 @@ async function initPosition() {
   const saved = runtime.getPosition(props.alert.id);
   await nextTick();
   const el = rootRef.value;
-  const w = el?.offsetWidth || Math.min(360, Math.round(window.innerWidth * 0.9));
+  const w =
+    el?.offsetWidth || Math.min(360, Math.round(window.innerWidth * 0.9));
   const h = el?.offsetHeight || 160;
 
   if (saved) {
@@ -131,15 +158,22 @@ function applyVolume() {
   if (videoRef.value) {
     // iOS может игнорировать volume, тогда хотя бы muted/unmuted
     videoRef.value.muted = vol === 0;
-    try { videoRef.value.volume = vol } catch {}
+    try {
+      videoRef.value.volume = vol;
+    } catch {}
   }
   if (audioRef.value) {
-    try { audioRef.value.volume = vol } catch {}
+    try {
+      audioRef.value.volume = vol;
+    } catch {}
   }
   // Синхронизация в popup
   if (popupWin && !popupWin.closed) {
     try {
-      popupWin.postMessage({ type: "alerts:set-volume", value: vol }, window.location.origin);
+      popupWin.postMessage(
+        { type: "alerts:set-volume", value: vol },
+        window.location.origin
+      );
     } catch {}
   }
 }
@@ -162,7 +196,9 @@ function onRequestDismiss() {
     (document as any).exitPictureInPicture?.().catch(() => {});
   }
   if (popupWin && !popupWin.closed) {
-    try { popupWin.close() } catch {}
+    try {
+      popupWin.close();
+    } catch {}
     popupWin = null;
   }
   visible.value = false;
@@ -201,7 +237,9 @@ onBeforeUnmount(() => {
   window.removeEventListener("pointermove", onPointerMove as any);
   window.removeEventListener("pointerup", onPointerUp as any);
   if (popupWin && !popupWin.closed) {
-    try { popupWin.close() } catch {}
+    try {
+      popupWin.close();
+    } catch {}
     popupWin = null;
   }
 });
@@ -213,14 +251,23 @@ async function tryStartPlayback() {
   try {
     if (props.alert.asset.kind === "video") {
       videoRef.value!.muted = settings.volume === 0;
+      console.log(
+        "[Overlay] tryStartPlayback video, src =",
+        videoRef.value?.src
+      );
       await videoRef.value!.play();
     } else {
+      console.log(
+        "[Overlay] tryStartPlayback audio, src =",
+        audioRef.value?.src
+      );
       await audioRef.value!.play();
     }
-  } catch {
+  } catch (err) {
+    console.warn("[Overlay] play() rejected", err);
     if (videoRef.value) {
       try {
-        videoRef.value.muted = true;
+        videoRef.value.muted = false;
         await videoRef.value.play();
         const unlock = () => {
           if (!videoRef.value) return;
@@ -244,11 +291,19 @@ async function tryStartPlayback() {
 
 function handlePlayMode() {
   const mode = playMode.value;
-  if (mode === "pip" && props.alert.asset.kind === "video" && videoRef.value && !pipRequested) {
+  if (
+    mode === "pip" &&
+    props.alert.asset.kind === "video" &&
+    videoRef.value &&
+    !pipRequested
+  ) {
     pipRequested = true;
-    (videoRef.value as any).requestPictureInPicture?.()
+    (videoRef.value as any)
+      .requestPictureInPicture?.()
       .then(() => onRequestDismiss())
-      .catch(() => { pipRequested = false; });
+      .catch(() => {
+        pipRequested = false;
+      });
   } else if (mode === "popup" && !popupWin) {
     openPopupWindow();
   }
@@ -259,7 +314,8 @@ function openPopupWindow() {
   if (!src) return;
   const vol = Math.max(0, Math.min(1, settings.volume));
 
-  const features = "popup=yes,width=420,height=300,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no";
+  const features =
+    "popup=yes,width=420,height=300,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no";
   popupWin = window.open("", "_blank", features);
   if (!popupWin) return; // заблокировано — остаёмся в оверлее
 
@@ -282,32 +338,46 @@ function openPopupWindow() {
   m.id = "m";
   m.src = src;
   m.autoplay = true;
-  m.setAttribute("controlslist", "nodownload noplaybackrate nofullscreen noremoteplayback");
+  m.setAttribute(
+    "controlslist",
+    "nodownload noplaybackrate nofullscreen noremoteplayback"
+  );
   m.style.width = "100%";
   m.style.borderRadius = "8px";
   if (isVideo) {
     (m as HTMLVideoElement).playsInline = true;
-    if (props.alert.asset.poster) (m as HTMLVideoElement).poster = props.alert.asset.poster!;
+    if (props.alert.asset.poster)
+      (m as HTMLVideoElement).poster = props.alert.asset.poster!;
   }
   wrap.appendChild(m);
 
   // Применение громкости и обработчики
-  try { (m as any).volume = vol } catch {}
+  try {
+    (m as any).volume = vol;
+  } catch {}
   if (isVideo) (m as HTMLVideoElement).muted = vol === 0;
-  m.addEventListener("ended", () => { try { popupWin?.close() } catch {} });
+  m.addEventListener("ended", () => {
+    try {
+      popupWin?.close();
+    } catch {}
+  });
 
   // Получатель сообщений на стороне popup
   popupWin.addEventListener("message", (e: MessageEvent) => {
     if (e.origin !== window.location.origin) return;
     if (e.data && e.data.type === "alerts:set-volume") {
       const v = Math.max(0, Math.min(1, Number(e.data.value) || 0));
-      try { (m as any).volume = v } catch {}
+      try {
+        (m as any).volume = v;
+      } catch {}
       if (isVideo) (m as HTMLVideoElement).muted = v === 0;
     }
   });
 
   // Старт воспроизведения (на всякий)
-  m.play?.().catch(() => { /* если заблокировано — пользователь кликнет */ });
+  m.play?.().catch(() => {
+    /* если заблокировано — пользователь кликнет */
+  });
 
   // Закрываем оверлей — играем в popup
   onRequestDismiss();
@@ -320,7 +390,11 @@ watch(dataUrl, (src) => {
 });
 
 // громкость: сразу и при каждом изменении
-watch(() => settings.volume, () => applyVolume(), { immediate: true });
+watch(
+  () => settings.volume,
+  () => applyVolume(),
+  { immediate: true }
+);
 
 // смена playMode на лету
 watch(playMode, () => handlePlayMode());
@@ -373,7 +447,9 @@ function onOpenTarget() {
 </script>
 
 <style scoped>
-.alert-item { /* стили задаём через :style */ }
+.alert-item {
+  /* стили задаём через :style */
+}
 
 .media {
   width: 100%;
@@ -381,7 +457,9 @@ function onOpenTarget() {
   pointer-events: none;
   user-select: none;
 }
-.media-audio { width: 100%; }
+.media-audio {
+  width: 100%;
+}
 
 .actions {
   margin-top: 6px;
@@ -393,14 +471,20 @@ function onOpenTarget() {
   font-size: 12px;
   margin-top: 4px;
 }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.15s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 .meta {
   margin-top: 8px;
 }
 .meta .msg {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 6px 8px;
   font-size: 13px;

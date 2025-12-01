@@ -60,7 +60,15 @@ export const useUserAlertsSettingsStore = defineStore(
     const testFrom = useStorage<"me" | "custom">("alerts.user.testFrom", "me");
     const testFromName = useStorage<string>("alerts.user.testFromName", "");
 
-    return { autoplay, volume, playMode, allowFrom, testMessage, testFrom, testFromName };
+    return {
+      autoplay,
+      volume,
+      playMode,
+      allowFrom,
+      testMessage,
+      testFrom,
+      testFromName,
+    };
   }
 );
 
@@ -107,7 +115,46 @@ export const useAlertsLibraryStore = defineStore("alertsLibrary", () => {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((a) => a as unknown as StoredAlertAsset);
   }
+  async function updateAssetMeta(
+    id: string,
+    patch: { name?: string; poster?: string }
+  ) {
+    const idx = assets.value.findIndex((a) => a.id === id);
+    if (idx === -1) return;
+    const prev = assets.value[idx];
+    const next = {
+      ...prev,
+      ...(patch.name != null ? { name: patch.name } : {}),
+      ...(patch.poster != null ? { poster: patch.poster } : {}),
+    };
+    assets.value = [next, ...assets.value.filter((a) => a.id !== id)];
+  }
 
+  async function replaceAssetData(params: {
+    id: string;
+    dataUrl: string;
+    mime: string;
+    size: number;
+    durationSec?: number;
+    poster?: string;
+  }) {
+    const idx = assets.value.findIndex((a) => a.id === params.id);
+    if (idx === -1) throw new Error("Алерт не найден");
+    const prev = assets.value[idx];
+
+    // перезаписываем данные по существующему dataKey
+    await idbSet(prev.dataKey, params.dataUrl);
+
+    const next: AlertMetaOnly = {
+      ...prev,
+      mime: params.mime,
+      size: params.size,
+      durationSec: params.durationSec ?? prev.durationSec,
+      poster: params.poster ?? prev.poster,
+    };
+
+    assets.value = [next, ...assets.value.filter((a) => a.id !== params.id)];
+  }
   function canAdd(
     ownerType: "user" | "group",
     ownerId: string,
@@ -119,16 +166,17 @@ export const useAlertsLibraryStore = defineStore("alertsLibrary", () => {
   }
 
   async function addAsset(
-    payload: Omit<AlertAsset, "id" | "createdAt" | "durationSec" | "poster"> & {
+    payload: Omit<AlertAsset, "id" | "createdAt"> & {
       file?: File;
+      // durationSec здесь можно передать из триммера
     }
   ): Promise<StoredAlertAsset> {
     if (payload.size > MAX_FILE_SIZE) throw new Error("Файл превышает 100 МБ");
 
-    let durationSec: number | undefined;
-    let poster: string | undefined;
+    let durationSec: number | undefined = payload.durationSec;
+    let poster: string | undefined = payload.poster;
 
-    if (payload.kind === "video" && payload.file) {
+    if (payload.kind === "video" && payload.file && durationSec == null) {
       const res = await probeVideo(payload.file);
       if (res.durationSec > MAX_VIDEO_DURATION) {
         throw new Error(`Видео дольше ${MAX_VIDEO_DURATION} секунд`);
@@ -149,7 +197,22 @@ export const useAlertsLibraryStore = defineStore("alertsLibrary", () => {
     const id = crypto.randomUUID();
     const dataKey = `alert.data.${id}`;
 
-    await idbSet(dataKey, payload.dataUrl);
+    // Гарантируем, что в IndexedDB попадёт валидный dataURL
+    let dataUrl = payload.dataUrl;
+
+    const isValidDataUrl =
+      typeof dataUrl === "string" && dataUrl.startsWith("data:");
+
+    if (!isValidDataUrl) {
+      if (payload.file) {
+        // Перечитываем файл как dataURL, если что-то пошло не так
+        dataUrl = await fileToDataUrl(payload.file);
+      } else {
+        throw new Error("Пустой dataUrl и нет файла для чтения");
+      }
+    }
+
+    await idbSet(dataKey, dataUrl);
 
     const item: AlertMetaOnly = {
       id,
@@ -194,11 +257,28 @@ export const useAlertsLibraryStore = defineStore("alertsLibrary", () => {
     canAdd,
     loadDataUrl,
     getMeta,
+    updateAssetMeta,
+    replaceAssetData,
   };
 });
-
+// Вспомогательная функция: читаем файл как dataURL
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const res = typeof r.result === "string" ? r.result : "";
+      if (!res) {
+        reject(new Error("Не удалось прочитать файл как dataURL"));
+      } else {
+        resolve(res);
+      }
+    };
+    r.onerror = () => reject(new Error("Ошибка чтения файла"));
+    r.readAsDataURL(file);
+  });
+}
 // Видеопроба (длительность/постер)
-function probeVideo(
+export function probeVideo(
   file: File
 ): Promise<{ durationSec: number; poster?: string }> {
   return new Promise((resolve, reject) => {
@@ -233,6 +313,23 @@ function probeVideo(
     };
   });
 }
+export function probeAudio(file: File): Promise<{ durationSec: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const audio = document.createElement("audio");
+    audio.preload = "metadata";
+    audio.src = url;
+    audio.onloadedmetadata = () => {
+      const durationSec = Number(audio.duration || 0);
+      URL.revokeObjectURL(url);
+      resolve({ durationSec });
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Не удалось прочитать метаданные аудио"));
+    };
+  });
+}
 
 // Runtime
 export interface IncomingAlert {
@@ -255,7 +352,7 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
     {}
   );
   // NEW: позиции карточек
-  const positions = ref<Record<string, { x: number; y: number }>>({})
+  const positions = ref<Record<string, { x: number; y: number }>>({});
   function fillFromQueue() {
     while (actives.value.length < MAX_ACTIVE && queue.value.length > 0) {
       const next = queue.value.shift()!;
@@ -314,11 +411,23 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
 
   // Для плеера (реактивно)
   function getAssetUrl(asset: StoredAlertAsset | any) {
-    if (asset?.dataUrl) return asset.dataUrl;
+    if (!asset || typeof asset.mime !== "string") return "";
+
+    // Разрешаем все видео и аудио-форматы
+    if (!asset.mime.startsWith("video/") && !asset.mime.startsWith("audio/")) {
+      return "";
+    }
+
+    if (asset?.dataUrl && typeof asset.dataUrl === "string") {
+      return asset.dataUrl;
+    }
+
     const key = asset?.id as string;
     if (!key) return "";
+
     const hit = assetUrlCache.value[key];
     if (hit) return hit;
+
     const lib = useAlertsLibraryStore();
     lib
       .loadDataUrl(key)
@@ -332,12 +441,13 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
           assetUrlCache.value = { ...assetUrlCache.value, [key]: "" };
         }
       });
+
     return "";
   }
 
   // Отправка
   async function sendAlertDM(params: {
- meId: string;
+    meId: string;
     peerId: string;
     asset: StoredAlertAsset;
     action: AlertAction;
@@ -347,7 +457,7 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
     const dm = useMessagesStore();
 
     // НЕ вкладываем dataUrl! Только ссылка на ассет.
-   dm.sendAttachment(
+    dm.sendAttachment(
       params.meId,
       params.peerId,
       {
@@ -366,7 +476,7 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
       params.text || ""
     );
 
-        // Если отправили "самому себе" — показываем локально
+    // Если отправили "самому себе" — показываем локально
     if (params.peerId === params.meId) {
       const prof = useProfilesStore();
       const fallbackFrom = prof.name || "Я";
@@ -376,14 +486,14 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
         meta: { action: params.action, context: "dm", peerId: params.peerId },
         senderId: params.meId,
         recipients: { users: [params.peerId], roles: [] },
-        text: params.text,                                // NEW
-        fromName: params.fromName || fallbackFrom,        // NEW
+        text: params.text, // NEW
+        fromName: params.fromName || fallbackFrom, // NEW
       });
     }
   }
 
   async function sendAlertChannel(params: {
-   meId: string;
+    meId: string;
     groupId: string;
     channelId: string;
     asset: StoredAlertAsset;
@@ -394,7 +504,7 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
   }) {
     const ch = useGroupMessagesStore();
 
-      ch.sendAttachment(
+    ch.sendAttachment(
       params.meId,
       params.channelId,
       {
@@ -414,7 +524,7 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
       params.text || ""
     );
 
-     // Если мы в получателях — показываем локально
+    // Если мы в получателях — показываем локально
     if (params.recipients?.users?.includes(params.meId)) {
       const prof = useProfilesStore();
       const fallbackFrom = prof.name || "Я";
@@ -429,8 +539,8 @@ export const useAlertsRuntimeStore = defineStore("alertsRuntime", () => {
         },
         senderId: params.meId,
         recipients: params.recipients,
-        text: params.text,                                // NEW
-        fromName: params.fromName || fallbackFrom,        // NEW
+        text: params.text, // NEW
+        fromName: params.fromName || fallbackFrom, // NEW
       });
     }
   }

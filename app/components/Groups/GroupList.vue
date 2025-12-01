@@ -6,19 +6,20 @@
         :key="group.id"
         v-slot="{ isHovering, props: hoverProps }"
       >
-        <v-list-item
-          v-bind="hoverProps"
-          rounded="lg"
-          :style="groupItemStyle(group.id, isHovering)"
-          @click="open(group.id)"
-        >
-          <template #prepend>
-            <v-avatar size="40">
-              <v-img :src="group.avatar || defaultGroupAvatar" alt="" />
-            </v-avatar>
-          </template>
-          <v-list-item-title>{{ group.name }}</v-list-item-title>
-        </v-list-item>
+        <NuxtLink :to="`/groups/${group.id}`">
+          <v-list-item
+            v-bind="hoverProps"
+            rounded="lg"
+            :style="groupItemStyle(group.id, isHovering)"
+          >
+            <template #prepend>
+              <v-avatar size="40">
+                <v-img :src="group.avatar || defaultGroupAvatar" alt="" />
+              </v-avatar>
+            </template>
+            <v-list-item-title>{{ group.name }}</v-list-item-title>
+          </v-list-item>
+        </NuxtLink>
       </v-hover>
     </v-list>
   </v-card>
@@ -82,5 +83,5 @@ export default defineComponent({
 /* Hover — лёгкая подсветка */
 :deep(.v-list-item:hover) {
   background: color-mix(in oklab, currentColor 8%, transparent) !important;
-} 
+}
 </style>

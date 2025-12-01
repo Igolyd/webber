@@ -18,8 +18,10 @@ type Participant = {
   avatarUrl?: string;
 };
 
-const JANUS_SERVER = "wss://janus.shinegold.ru/janus";
+const JANUS_SERVER = "wss://janus.shinegold.ru";
 
+// Статический ID комнаты для всех голосовых каналов (для отладки/тестов)
+const STATIC_ROOM_ID = 1234;
 // Meta → display
 function encodeDisplay(name: string, avatarUrl?: string) {
   try {
@@ -37,11 +39,13 @@ function decodeDisplay(s: string): { name: string; avatar?: string } {
     return { name: s };
   }
 }
-
 export const useCallStore = defineStore("call", () => {
   const callEnabled = ref(false);
   const activeVoiceChannelId = ref<string | null>(null);
   const focusParticipantId = ref<string | null>(null);
+
+  const isJoining = ref(false);
+  const joinAttemptId = ref(0);
   const channelsStore = useChannelsStore();
 
   // Janus objects
@@ -94,6 +98,23 @@ export const useCallStore = defineStore("call", () => {
     if (st.ensureTimer) clearTimeout(st.ensureTimer);
     if (st.retryTimer) clearTimeout(st.retryTimer);
     subState.set(pid, { retries: st.retries || 0 });
+  }
+  function cancelJoin() {
+    // Инвалидируем любую текущую попытку join
+    joinAttemptId.value++;
+
+    // Сразу прячем спиннер в UI
+    isJoining.value = false;
+
+    // Если мы уже в звонке – просто выходим
+    if (callEnabled.value) {
+      leaveCall().catch(() => {});
+      return;
+    }
+
+    // Если еще не успели войти — на всякий случай чистим базовое состояние
+    activeVoiceChannelId.value = null;
+    // можно не трогать callEnabled, он и так false до успешного join
   }
   function clearAllSubTimers() {
     for (const pid of subState.keys()) clearSubTimers(pid);
@@ -169,10 +190,12 @@ export const useCallStore = defineStore("call", () => {
           rtcConfig: {
             iceServers: [
               {
-                urls: [
-                  "stun:stun.l.google.com:19302",
-                  "stun:global.stun.twilio.com:3478",
-                ],
+                urls: "turn:185.198.152.131:3478",
+                username: "ice",
+                credential: "ShineGold#!",
+              },
+              {
+                urls: "stun:185.198.152.131:3478",
               },
             ],
             bundlePolicy: "max-bundle",
@@ -356,74 +379,161 @@ export const useCallStore = defineStore("call", () => {
   }
 
   async function joinVoiceChannel(channelId: string, displayName?: string) {
+    console.log(
+      "[joinVoiceChannel] call, isJoining =",
+      isJoining.value,
+      "channelId =",
+      channelId
+    );
+
     if (!import.meta.client) return;
-    if (callEnabled.value && activeVoiceChannelId.value === channelId) return;
 
-    await ensureJanus();
-
-    const ch = channelsStore.getById(channelId);
-    if (!ch) return;
-
-    let roomId = ch.janusRoomId ?? null;
-    if (ch.type !== "voice") {
-      console.warn("joinVoiceChannel: not a voice channel");
+    // Если уже идет join – можно либо игнорировать, либо отменять старый.
+    // Я предлагаю ИГНОРИРОВАТЬ клик, пока isJoining = true:
+    if (isJoining.value) {
+      console.log("[joinVoiceChannel] skipped: join already in progress");
       return;
     }
-    if (!roomId) {
-      try {
-        roomId = await createJanusRoom({
-          description: `${ch.name} (${ch.groupId})`,
-          is_private: false,
-        });
-        channelsStore.updateChannel(ch.id, { janusRoomId: roomId });
-      } catch (e) {
-        console.error("Failed to create Janus room", e);
+
+    // Регистрируем новую попытку
+    const myAttemptId = ++joinAttemptId.value;
+    isJoining.value = true;
+
+    try {
+      // Если уже в этом же канале – просто показывать окно, join не нужен
+      if (callEnabled.value && activeVoiceChannelId.value === channelId) {
+        console.log(
+          "[joinVoiceChannel] already in this channel, skipping join"
+        );
         return;
       }
+
+      await ensureJanus();
+      if (myAttemptId !== joinAttemptId.value) {
+        console.log("[joinVoiceChannel] aborted after ensureJanus");
+        return;
+      }
+
+      const ch = channelsStore.getById(channelId);
+      if (!ch) {
+        console.warn("[joinVoiceChannel] channel not found", channelId);
+        return;
+      }
+      if (ch.type !== "voice") {
+        console.warn("joinVoiceChannel: not a voice channel");
+        return;
+      }
+
+      let roomId = ch.janusRoomId ?? null;
+      if (!roomId) {
+        roomId = STATIC_ROOM_ID;
+        channelsStore.updateChannel(ch.id, { janusRoomId: roomId });
+      }
+
+      // Если уже были в звонке – выйдем
+      if (callEnabled.value) {
+        console.log("[joinVoiceChannel] leaving previous call");
+        await leaveCall(false);
+        if (myAttemptId !== joinAttemptId.value) {
+          console.log("[joinVoiceChannel] aborted after leaveCall");
+          return;
+        }
+      }
+
+      // Чистим состояние локальных потоков и подписок
+      clearAnalysers();
+      clearAllSubTimers();
+
+      localStream.value?.getTracks().forEach((t) => t.stop());
+      localStream.value = new MediaStream();
+
+      localVideoKind.value = settings.videoEnabled ? "camera" : "none";
+
+      const profileName =
+        displayName?.trim() || profiles.name?.trim() || "Без имени";
+      const profileAvatar = profiles.avatar || "";
+
+      participants.set("local", {
+        id: "local",
+        display: profileName,
+        hasVideo: false,
+        hasScreen: false,
+        hasAudio: false,
+        stream: localStream.value!,
+        isSpeaking: false,
+        speakingLevel: 0,
+        avatarUrl: profileAvatar || undefined,
+      });
+
+      if (myAttemptId !== joinAttemptId.value) {
+        console.log("[joinVoiceChannel] aborted before joinRoom");
+        return;
+      }
+
+      console.log("[joinVoiceChannel] joining Janus room", roomId);
+      janusRoom.value = await janusSession.value.joinRoom(roomId);
+
+      if (myAttemptId !== joinAttemptId.value) {
+        console.log(
+          "[joinVoiceChannel] aborted right after joinRoom → leaving room"
+        );
+        try {
+          await janusRoom.value.leave();
+        } catch {}
+        janusRoom.value = null;
+        return;
+      }
+
+      attachRoomMessageListener(janusRoom.value);
+      setupVisibilityAwakening();
+      janusRoom.value.onPublisherAdded((pubs: any[]) =>
+        pubs.forEach(subscribe)
+      );
+      janusRoom.value.onPublisherRemoved(unsubscribe);
+      if (typeof janusRoom.value.onPublisherList === "function") {
+        janusRoom.value.onPublisherList((pubs: any[]) =>
+          pubs.forEach(subscribe)
+        );
+      }
+
+      await publishWithCurrentSettings();
+      if (myAttemptId !== joinAttemptId.value) {
+        console.log("[joinVoiceChannel] aborted after publish → leaving room");
+        try {
+          await leaveCall(false);
+        } catch {}
+        return;
+      }
+
+      // Только если попытка всё ещё актуальна – считаем, что звонок установлен
+      callEnabled.value = true;
+      activeVoiceChannelId.value = channelId;
+      settings.toggleCall(true);
+
+      console.log("[joinVoiceChannel] finished successfully");
+    } catch (e) {
+      console.error("[joinVoiceChannel] error", e);
+    } finally {
+      // Сбрасываем isJoining только если это все еще актуальная попытка
+      if (myAttemptId === joinAttemptId.value) {
+        isJoining.value = false;
+        console.log(
+          "[joinVoiceChannel] finally, isJoining =",
+          isJoining.value,
+          "attemptId =",
+          myAttemptId
+        );
+      } else {
+        console.log(
+          "[joinVoiceChannel] finally, but attempt already superseded",
+          "myAttemptId =",
+          myAttemptId,
+          "current =",
+          joinAttemptId.value
+        );
+      }
     }
-
-    if (callEnabled.value) await leaveCall(false);
-
-    clearAnalysers();
-    clearAllSubTimers();
-
-    localStream.value?.getTracks().forEach((t) => t.stop());
-    localStream.value = new MediaStream();
-
-    localVideoKind.value = settings.videoEnabled ? "camera" : "none";
-
-    const profileName =
-      displayName?.trim() || profiles.name?.trim() || "Без имени";
-    const profileAvatar = profiles.avatar || "";
-
-    participants.set("local", {
-      id: "local",
-      display: profileName,
-      hasVideo: false,
-      hasScreen: false,
-      hasAudio: false,
-      stream: localStream.value!,
-      isSpeaking: false,
-      speakingLevel: 0,
-      avatarUrl: profileAvatar || undefined,
-    });
-
-    janusRoom.value = await janusSession.value.joinRoom(roomId);
-    attachRoomMessageListener(janusRoom.value);
-    setupVisibilityAwakening(); // <- добавили
-    janusRoom.value.onPublisherAdded((pubs: any[]) => pubs.forEach(subscribe));
-    janusRoom.value.onPublisherRemoved(unsubscribe);
-    if (typeof janusRoom.value.onPublisherList === "function") {
-      janusRoom.value.onPublisherList((pubs: any[]) => pubs.forEach(subscribe));
-    }
-
-    await publishWithCurrentSettings();
-
-    callEnabled.value = true;
-    activeVoiceChannelId.value = channelId;
-    settings.toggleCall(true);
   }
-
   async function ensureMissingMids(pid: string, pub: any) {
     const sub = subscriptions.get(pid);
     if (!sub) return;
@@ -700,6 +810,12 @@ export const useCallStore = defineStore("call", () => {
     if (resetChannel) activeVoiceChannelId.value = null;
     focusParticipantId.value = null;
     shareConstraints.value = null;
+    callEnabled.value = false;
+    isJoining.value = false; // на всякий случай
+    settings.toggleCall(false);
+    if (resetChannel) activeVoiceChannelId.value = null;
+    focusParticipantId.value = null;
+    shareConstraints.value = null;
   }
 
   async function resumeAnalysers() {
@@ -964,9 +1080,10 @@ export const useCallStore = defineStore("call", () => {
     selectedCamId,
     selectedOutputId,
     localVideoKind,
-
+    isJoining,
     joinVoiceChannel,
     leaveCall,
+    cancelJoin,
 
     toggleMic,
     toggleCamera,

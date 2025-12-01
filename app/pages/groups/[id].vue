@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="h-100 d-flex pa-0 ">
+  <v-container fluid class="h-100 d-flex pa-0">
     <SmallNavigationTab
       :groups="groupsList"
       :selectedGroupId="activeGroupId"
@@ -28,15 +28,10 @@
       @channel-click="handleChannelClick"
     >
       <template #append>
-        <MyProfileTabNavigation
-          class="px-1 pb-1"
-        />
+        <MyProfileTabNavigation class="px-1 pb-1" />
       </template>
     </ChannelsDrawer>
-    <UsersDrawer
-      v-model="usersDrawer"
-      :is-sm-and-down="isSmAndDown"
-    />
+    <UsersDrawer v-model="usersDrawer" :is-sm-and-down="isSmAndDown" />
     <ContentArea
       class="content-area"
       :active-text-channel-name="activeTextChannelName"
@@ -380,6 +375,8 @@ function toggleDirectory(id: string) {
 }
 function handleChannelClick(ch: Channel) {
   if (ch.type === "voice") {
+    if (call.isJoining) return;
+
     if (!call.callEnabled || call.activeVoiceChannelId !== ch.id) {
       call.joinVoiceChannel(ch.id, profiles.name || "User");
     } else if (call.activeVoiceChannelId === ch.id) {

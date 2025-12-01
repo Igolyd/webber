@@ -30,9 +30,6 @@
                   @keydown.space.prevent="showFullProfile = true"
                 >
                   <div class="avatar-cell">
-                    
-                    <!-- Оставляем компактный аватар, BannerAvatar в мини-виде тяжёлый.
-                         Баннер полноценно показываем в карточках (напр., GroupMemberProfileCard) -->
                     <v-avatar :size="avatarSize" :rounded="99999">
                       <v-img
                         :src="profiles.avatar || defaultAvatar"
@@ -62,9 +59,15 @@
               </template>
 
               <div class="menu-surface">
-                <FullProfileTabNavigation />
+                <FullProfileTabNavigation
+                  @openWinProfile="
+                    showWinProfile = true;
+                    showFullProfile = false;
+                  "
+                />
               </div>
             </v-menu>
+
             <div class="d-flex align-center ga-1">
               <!-- Микрофон -->
               <div class="activator-wrap">
@@ -177,11 +180,13 @@
         </v-card-item>
 
         <v-expand-transition>
-          <div v-show="call.callEnabled">
+          <div v-show="call.callEnabled || call.isJoining">
             <v-divider />
             <v-card-text class="py-2">
               <div class="d-flex align-center ga-2 flex-wrap">
+                <!-- Кнопка в зависимости от состояния -->
                 <v-btn
+                  v-if="!call.isJoining && call.callEnabled"
                   variant="text"
                   color="error"
                   prepend-icon="mdi-phone-hangup"
@@ -191,107 +196,137 @@
                   Отключиться
                 </v-btn>
 
-                <!-- Камера -->
-                <div class="activator-wrap">
-                  <v-btn
-                    :class="
-                      settings.videoEnabled
-                        ? 'btn-primary-tonal'
-                        : 'btn-surface-variant'
-                    "
-                    variant="text"
-                    :prepend-icon="
-                      settings.videoEnabled ? 'mdi-video' : 'mdi-video-off'
-                    "
-                    :density="btnDensity"
-                    @click="onToggleCamera"
-                    @contextmenu.prevent.stop="openCamMenu = true"
-                  >
-                    Видео
-                  </v-btn>
-                  <v-menu
-                    v-model="openCamMenu"
-                    activator="parent"
-                    location="bottom"
-                    content-class="menu-scope"
-                  >
-                    <v-list
-                      density="compact"
-                      color="transparent"
-                      style="min-width: 260px"
-                    >
-                      <v-list-subheader>Камера</v-list-subheader>
-                      <v-list-item
-                        v-for="d in videoDevices"
-                        :key="d.deviceId"
-                        @click="setCam(d.deviceId)"
-                      >
-                        <v-list-item-title>{{
-                          d.label || "Камера"
-                        }}</v-list-item-title>
-                        <template #append>
-                          <v-icon
-                            v-if="call.selectedCamId === d.deviceId"
-                            color="primary"
-                            >mdi-check</v-icon
-                          >
-                        </template>
-                      </v-list-item>
-                    </v-list>
-                  </v-menu>
+                <v-btn
+                  v-else-if="call.isJoining"
+                  variant="text"
+                  color="error"
+                  prepend-icon="mdi-close"
+                  :density="btnDensity"
+                  @click="cancelJoin"
+                >
+                  Отменить подключение
+                </v-btn>
+
+                <!-- Индикатор "подключаемся" -->
+                <div v-if="call.isJoining" class="d-flex align-center ga-2">
+                  <v-progress-circular
+                    indeterminate
+                    size="20"
+                    width="2"
+                    color="primary"
+                  />
+                  <span class="text-caption text-medium-emphasis">
+                    Подключаемся к голосовому каналу...
+                  </span>
                 </div>
 
-                <!-- Трансляция -->
-                <div class="activator-wrap">
-                  <v-btn
-                    variant="text"
-                    :color="
-                      call.localVideoKind === 'screenshare'
-                        ? 'primary'
-                        : 'surface-variant'
-                    "
-                    :prepend-icon="
-                      call.localVideoKind === 'screenshare'
-                        ? 'mdi-television-play'
-                        : 'mdi-television-stop'
-                    "
-                    :density="btnDensity"
-                    @click="toggleShareDefault"
-                    @contextmenu.prevent.stop="openShareMenu = true"
-                  >
-                    Трансляция
-                  </v-btn>
-                  <v-menu
-                    v-model="openShareMenu"
-                    activator="parent"
-                    location="bottom"
-                    content-class="menu-scope"
-                  >
-                    <v-list density="compact" color="transparent">
-                      <v-list-subheader>Качество шэринга</v-list-subheader>
-                      <v-list-item @click="toggleSharePreset(1280, 720, 60)"
-                        >720p @ 60fps</v-list-item
+                <!-- Остальной набор кнопок (камера, трансляция) имеет смысл только,
+                     когда уже подключены -->
+                <template v-if="call.callEnabled && !call.isJoining">
+                  <!-- Камера -->
+                  <div class="activator-wrap">
+                    <v-btn
+                      :class="
+                        settings.videoEnabled
+                          ? 'btn-primary-tonal'
+                          : 'btn-surface-variant'
+                      "
+                      variant="text"
+                      :prepend-icon="
+                        settings.videoEnabled ? 'mdi-video' : 'mdi-video-off'
+                      "
+                      :density="btnDensity"
+                      @click="onToggleCamera"
+                      @contextmenu.prevent.stop="openCamMenu = true"
+                    >
+                      Видео
+                    </v-btn>
+                    <v-menu
+                      v-model="openCamMenu"
+                      activator="parent"
+                      location="bottom"
+                      content-class="menu-scope"
+                    >
+                      <v-list
+                        density="compact"
+                        color="transparent"
+                        style="min-width: 260px"
                       >
-                      <v-list-item @click="toggleSharePreset(1280, 720, 30)"
-                        >720p @ 30fps</v-list-item
-                      >
-                      <v-list-item @click="toggleSharePreset(854, 480, 30)"
-                        >480p @ 30fps</v-list-item
-                      >
-                      <v-list-item @click="toggleSharePreset(854, 480, 15)"
-                        >480p @ 15fps</v-list-item
-                      >
-                    </v-list>
-                  </v-menu>
-                </div>
+                        <v-list-subheader>Камера</v-list-subheader>
+                        <v-list-item
+                          v-for="d in videoDevices"
+                          :key="d.deviceId"
+                          @click="setCam(d.deviceId)"
+                        >
+                          <v-list-item-title>{{
+                            d.label || "Камера"
+                          }}</v-list-item-title>
+                          <template #append>
+                            <v-icon
+                              v-if="call.selectedCamId === d.deviceId"
+                              color="primary"
+                              >mdi-check</v-icon
+                            >
+                          </template>
+                        </v-list-item>
+                      </v-list>
+                    </v-menu>
+                  </div>
+
+                  <!-- Трансляция -->
+                  <div class="activator-wrap">
+                    <v-btn
+                      variant="text"
+                      :color="
+                        call.localVideoKind === 'screenshare'
+                          ? 'primary'
+                          : 'surface-variant'
+                      "
+                      :prepend-icon="
+                        call.localVideoKind === 'screenshare'
+                          ? 'mdi-television-play'
+                          : 'mdi-television-stop'
+                      "
+                      :density="btnDensity"
+                      @click="toggleShareDefault"
+                      @contextmenu.prevent.stop="openShareMenu = true"
+                    >
+                      Трансляция
+                    </v-btn>
+                    <v-menu
+                      v-model="openShareMenu"
+                      activator="parent"
+                      location="bottom"
+                      content-class="menu-scope"
+                    >
+                      <v-list density="compact" color="transparent">
+                        <v-list-subheader>Качество шэринга</v-list-subheader>
+                        <v-list-item @click="toggleSharePreset(1280, 720, 60)"
+                          >720p @ 60fps</v-list-item
+                        >
+                        <v-list-item @click="toggleSharePreset(1280, 720, 30)"
+                          >720p @ 30fps</v-list-item
+                        >
+                        <v-list-item @click="toggleSharePreset(854, 480, 30)"
+                          >480p @ 30fps</v-list-item
+                        >
+                        <v-list-item @click="toggleSharePreset(854, 480, 15)"
+                          >480p @ 15fps</v-list-item
+                        >
+                      </v-list>
+                    </v-menu>
+                  </div>
+                </template>
               </div>
             </v-card-text>
           </div>
         </v-expand-transition>
       </v-card>
     </v-hover>
+    <WinProfile v-model="showWinProfile" />
   </div>
 </template>
+
 <script lang="ts">
 import { defineComponent, reactive, toRefs, computed, onMounted } from "vue";
 import { useDisplay } from "vuetify";
@@ -299,17 +334,21 @@ import { useSettingsStore } from "~/stores/settings";
 import { useProfilesStore } from "~/stores/user/profiles";
 import { useCallStore } from "~/stores/call";
 import FullProfileTabNavigation from "./FullProfileTabNavigation.vue";
+import WinProfile from "./WinProfile.vue";
 import dfAvatal from "../../assets/profile/profile_exp.jpg";
+
 export default defineComponent({
   name: "MyProfileTabNavigation",
-  components: { FullProfileTabNavigation },
+  components: { FullProfileTabNavigation, WinProfile }, // ← добавили WinProfile
   setup() {
     const settings = useSettingsStore();
     const profiles = useProfilesStore();
     const call = useCallStore();
     const defaultAvatar = dfAvatal;
+
     const state = reactive({
       showFullProfile: false,
+      showWinProfile: false, // ← новый/вернувшийся флаг
       openMicMenu: false,
       openSpkMenu: false,
       openCamMenu: false,
@@ -347,6 +386,7 @@ export default defineComponent({
       state.openShareMenu = false;
     };
     const leave = () => call.leaveCall();
+    const cancelJoin = () => call.cancelJoin();
     const setMic = (id: string) => call.setMicDevice(id);
     const setCam = (id: string) => call.setCamDevice(id);
     const setOutput = (id: string) => call.setOutputDevice(id);
@@ -357,7 +397,6 @@ export default defineComponent({
       return v.includes("gradient(") || v.startsWith("url(");
     }
 
-    // Фон карточки — по бейджу профиля, с ховером (полупрозрачный -> нормальный)
     function profileBadgeStyle(isHovering: boolean) {
       const badge = profiles.badge as any;
       const shape = (badge?.shape ||
@@ -369,7 +408,6 @@ export default defineComponent({
           "filter .18s ease, background-color .18s ease, background .18s ease, border-radius .18s ease",
         borderRadius:
           shape === "pill" ? "9999px" : shape === "square" ? "8px" : "14px",
-        // Фильтр для “полупрозрачности” без изменения контента
         filter: isHovering
           ? "none"
           : "opacity(0.75) saturate(0.92) brightness(0.98)",
@@ -381,7 +419,6 @@ export default defineComponent({
           style.backgroundColor = color;
         }
       } else {
-        // дефолт
         style.background =
           "linear-gradient(180deg, rgba(120,120,120,.15), rgba(80,80,80,.2))";
       }
@@ -402,6 +439,7 @@ export default defineComponent({
       toggleShareDefault,
       toggleSharePreset,
       leave,
+      cancelJoin,
       setMic,
       setCam,
       setOutput,
@@ -420,30 +458,24 @@ export default defineComponent({
   background: transparent !important;
   color: var(--lnav-on-surface);
 }
-
 .my-profile-wrapper::before {
   content: "";
   position: absolute;
   inset: 0;
-  /* тот же слой, что у Drawer */
   background: var(--lnav-background);
   z-index: 0;
 }
-
 .my-profile-container {
   position: relative;
   z-index: 1;
   width: 100%;
 }
-
 .avatar-cell {
   position: relative;
   display: inline-block;
   line-height: 0;
-  /* даём небольшой внутренний отступ под точку, чтобы не “липла” к тексту */
-    overflow: visible; /* на всякий случай */
+  overflow: visible;
 }
-
 .mini-status-dot {
   position: absolute;
   right: 0;
@@ -453,10 +485,9 @@ export default defineComponent({
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  /* ровное чёрное кольцо (обводка) */
   box-shadow: 0 0 0 2px #000;
   z-index: 2;
-  transition: background-color .18s ease, box-shadow .18s ease;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 .st-online {
   background: #3fb950;
@@ -470,6 +501,7 @@ export default defineComponent({
 .st-invisible {
   background: #9aa0a6;
 }
-/* чтобы активатор не резал содержимое, если где-то есть overflow */
-.profile-activator { overflow: visible; }
+.profile-activator {
+  overflow: visible;
+}
 </style>

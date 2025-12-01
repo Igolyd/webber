@@ -9,11 +9,13 @@
     class="theme-drawer-left scope-rnav"
   >
     <v-container class="functional-panel">
+      <NuxtLink to="/">
       <v-btn
         icon="mdi-message-text-outline"
-        @click="openPrivateMessage"
         :title="'ЛС'"
       ></v-btn>
+      </NuxtLink>
+
       <v-btn icon @click="$emit('toggleChannels')" :title="'Каналы'">
         <v-icon>mdi-view-list</v-icon>
       </v-btn>
@@ -68,10 +70,10 @@ const emit = defineEmits<{
 
 const drawer = ref(true);
 
-const openPrivateMessage = () => {
-  // TODO: заменить на роутер
-  window.location.href = "/";
-};
+// const openPrivateMessage = () => {
+//   // TODO: заменить на роутер
+//   window.location.href = "/";
+// };
 </script>
 
 <style scoped>

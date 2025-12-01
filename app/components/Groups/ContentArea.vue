@@ -32,8 +32,8 @@
         </v-btn>
       </div>
     </v-navigation-drawer>
-    <section class="content-scroll scope-main">
-      <v-card flat class="messages-theme pa-0" color="transparent">
+    <section class="content-scroll scope-main ">
+      <v-card flat class="messages-theme  pa-0" color="transparent">
         <ChatWindow context="channel" :channel-id="activeTextChannelId" />
       </v-card>
     </section>
@@ -103,7 +103,24 @@ const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
   overflow: hidden;
   padding-top: 0;
 }
-
+.scroll-y {
+  height: 100%;
+  overflow: auto;
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scroll-y::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.scroll-y {
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-y {
+  scrollbar-width: none;
+}
 @media (max-width: 600px) {
   .content-header {
     padding: 6px 8px;
