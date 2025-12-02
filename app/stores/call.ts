@@ -905,7 +905,8 @@ export const useCallStore = defineStore("call", () => {
     const me = participants.get("local");
     if (me) {
       me.hasScreen = on;
-      me.hasVideo = on || settings.videoEnabled;
+      // hasVideo = только камера, а не любой видео-трек
+      me.hasVideo = settings.videoEnabled && localVideoKind.value === "camera";
     }
   }
 
@@ -1008,7 +1009,7 @@ export const useCallStore = defineStore("call", () => {
           localStream.value.getVideoTracks().forEach((t) => {
             if (t !== track) localStream.value!.removeTrack(t);
           });
-          // помечаем экранный трек, если сейчас режим шеринга
+
           if (localVideoKind.value === "screenshare") {
             currentScreenTrack.value = track;
           }
@@ -1019,8 +1020,16 @@ export const useCallStore = defineStore("call", () => {
         const me = participants.get("local");
         if (me) {
           if (track.kind === "video") {
-            me.hasVideo = true;
-            me.hasScreen = localVideoKind.value === "screenshare";
+            if (localVideoKind.value === "screenshare") {
+              me.hasScreen = true;
+              me.hasVideo = false; // только шеринг
+            } else if (localVideoKind.value === "camera") {
+              me.hasVideo = true;
+              me.hasScreen = false; // только камера
+            } else {
+              me.hasVideo = false;
+              me.hasScreen = false;
+            }
           }
           if (track.kind === "audio") {
             me.hasAudio = true;
@@ -1042,10 +1051,20 @@ export const useCallStore = defineStore("call", () => {
 
         const me = participants.get("local");
         if (me) {
-          if (track.kind === "video")
-            me.hasVideo = localStream.value.getVideoTracks().length > 0;
-          if (track.kind === "audio")
+          if (track.kind === "video") {
+            const hasAnyVideo = localStream.value.getVideoTracks().length > 0;
+            if (!hasAnyVideo) {
+              me.hasVideo = false;
+              me.hasScreen = false;
+            } else {
+              const hasScreen = !!currentScreenTrack.value;
+              me.hasScreen = hasScreen;
+              me.hasVideo = !hasScreen;
+            }
+          }
+          if (track.kind === "audio") {
             me.hasAudio = localStream.value.getAudioTracks().length > 0;
+          }
         }
       });
 
@@ -1065,7 +1084,19 @@ export const useCallStore = defineStore("call", () => {
       }
     }
   );
-
+  watch(
+    () => settings.audioEnabled,
+    (enabled) => {
+      // Проходим по всем участникам, кроме локального
+      participants.forEach((p, id) => {
+        if (id === "local") return;
+        p.stream.getAudioTracks().forEach((t) => {
+          t.enabled = enabled;
+        });
+      });
+    },
+    { immediate: true }
+  );
   function setFocusParticipant(id: string | null) {
     focusParticipantId.value = id;
   }

@@ -336,6 +336,7 @@ import { useCallStore } from "~/stores/call";
 import FullProfileTabNavigation from "./FullProfileTabNavigation.vue";
 import WinProfile from "./WinProfile.vue";
 import dfAvatal from "../../assets/profile/profile_exp.jpg";
+import { useAVStore } from "~/stores/app/av";
 
 export default defineComponent({
   name: "MyProfileTabNavigation",
@@ -344,6 +345,7 @@ export default defineComponent({
     const settings = useSettingsStore();
     const profiles = useProfilesStore();
     const call = useCallStore();
+    const av = useAVStore();
     const defaultAvatar = dfAvatal;
 
     const state = reactive({
@@ -387,9 +389,22 @@ export default defineComponent({
     };
     const leave = () => call.leaveCall();
     const cancelJoin = () => call.cancelJoin();
-    const setMic = (id: string) => call.setMicDevice(id);
-    const setCam = (id: string) => call.setCamDevice(id);
-    const setOutput = (id: string) => call.setOutputDevice(id);
+    const setMic = (id: string) => {
+      call.setMicDevice(id); // переключаем в Janus
+      av.inputDeviceId = id; // синхронизируем настройки
+      av.saveDevices({ inputId: id });
+    };
+    const setCam = (id: string) => {
+      call.setCamDevice(id);
+      try {
+        localStorage.setItem("cameraDevice", id);
+      } catch {}
+    };
+    const setOutput = (id: string) => {
+      call.setOutputDevice(id);
+      av.outputDeviceId = id;
+      av.saveDevices({ outputId: id });
+    };
 
     function isGradientLike(val?: string) {
       if (!val) return false;
