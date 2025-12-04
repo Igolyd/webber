@@ -11,7 +11,7 @@
       height="48"
       >
       <v-spacer />
-      <v-avatar :size="30" :rounded="99999">
+      <v-avatar :size="40" :rounded="99999">
         <v-img :src="defaultLogo" cover />
       </v-avatar>
       <v-spacer />

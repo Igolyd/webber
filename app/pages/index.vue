@@ -15,8 +15,14 @@
           <template v-if="activeCategoryId === 1">
             <GroupList :groups="groupsStore.groups" @opened="onOpenFromList" />
           </template>
-          <template v-else>
+
+          <template v-else-if="activeCategoryId === 2">
             <FriendList :friends="myFriends" />
+          </template>
+
+          <template v-else>
+            <!-- 3. Авторы -->
+            <AuthorsList :communities="authorsStore.communities" />
           </template>
         </v-card>
       </section>
@@ -56,13 +62,17 @@
 <script lang="ts">
 import { defineComponent, ref, computed } from "vue";
 import { useDisplay } from "vuetify";
+
 import AppLeftDrawer from "@/components/navigation/AppLeftDrawer.vue";
 import ContentHeader from "@/components/layout/ContentHeader.vue";
 import GroupList from "@/components/Groups/GroupList.vue";
 import FriendList from "@/components/friends/FriendList.vue";
 import ActivityUserTab from "~/components/ActivityUserTab.vue";
+import AuthorsList from "@/components/authors/AuthorsList.vue";
+
 import { useGroupsStore } from "~/stores/groups";
 import { useUsersStore } from "~/stores/users";
+import { useAuthorsStore } from "~/stores/authors";
 
 export default defineComponent({
   name: "IndexPage",
@@ -72,12 +82,16 @@ export default defineComponent({
     GroupList,
     FriendList,
     ActivityUserTab,
+    AuthorsList,
   },
   setup() {
     const groupsStore = useGroupsStore();
     const usersStore = useUsersStore();
+    const authorsStore = useAuthorsStore();
+
     groupsStore.ensureSeed();
     usersStore.ensureSeed();
+    authorsStore.ensureSeed();
 
     const { smAndDown } = useDisplay();
     const isSmAndDown = computed(() => smAndDown.value);
@@ -88,8 +102,13 @@ export default defineComponent({
     const activeCategoryName = ref<string>("Группы");
 
     const myFriends = computed(() => usersStore.myFriends);
+
     const currentTitle = computed(() =>
-      activeCategoryId.value === 1 ? "Создать группу" : "Найти друга"
+      activeCategoryId.value === 1
+        ? "Создать группу"
+        : activeCategoryId.value === 2
+        ? "Найти друга"
+        : "Создать сообщество"
     );
 
     const leftDrawerRef = ref<InstanceType<typeof AppLeftDrawer> | null>(null);
@@ -97,11 +116,12 @@ export default defineComponent({
     const triggerPlus = () => {
       leftDrawerRef.value?.triggerCategoryAction();
     };
+
     const openSearch = () => {
-      if (activeCategoryId.value === 2)
-        leftDrawerRef.value?.triggerCategoryAction();
-      else leftDrawerRef.value?.triggerCategoryAction();
+      // пока поиск для всех категорий делает то же, что и плюс
+      leftDrawerRef.value?.triggerCategoryAction();
     };
+
     const onOpenFromList = () => {
       if (isSmAndDown.value) leftDrawer.value = false;
     };
@@ -109,6 +129,7 @@ export default defineComponent({
     return {
       groupsStore,
       usersStore,
+      authorsStore,
       isSmAndDown,
       leftDrawer,
       rightDrawer,
@@ -126,9 +147,12 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.h-100 { height: 100%; }
+.h-100 {
+  height: 100%;
+}
 
-/* Скоуп main + прозрачная поверхность */
+/* как у тебя */
+
 .content-area {
   flex: 1 1 auto;
   min-width: 0;
@@ -137,13 +161,11 @@ export default defineComponent({
   height: 100%;
   box-shadow: none !important;
 
-  /* Скоуп секции main для наследования цветов */
   --v-theme-surface: var(--main-background);
   --v-theme-on-surface: var(--main-on-surface);
   --v-theme-outline: var(--main-border);
   --v-theme-surface-variant: var(--main-elev-1);
 
-  /* Полностью прозрачный фон */
   background: transparent !important;
   color: var(--main-on-surface);
 }
@@ -154,7 +176,6 @@ export default defineComponent({
   background: transparent !important;
 }
 
-/* Карточка-обёртка — тоже прозрачная */
 .list-card {
   background: transparent !important;
   color: var(--main-on-surface);
@@ -165,7 +186,12 @@ export default defineComponent({
   padding: 0;
 }
 
-/* скрытый скролл у списка */
-.list-card::-webkit-scrollbar { width: 0; height: 0; }
-.list-card { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.list-card::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.list-card {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
 </style>

@@ -1,3 +1,4 @@
+<!-- components/Groups/ContentArea.vue -->
 <template>
   <div class="content-area rounded-te-lg">
     <v-navigation-drawer
@@ -12,7 +13,12 @@
       class="content-header-drawer scope-hdr rounded-te-lg"
     >
       <div class="content-header">
-        <h2 class="text-h6"># {{ activeTextChannelName }}</h2>
+        <h2 class="text-h6">
+          <template v-if="isAuthorCommunity">
+            {{ activeTextChannelName || "Сообщество автора" }}
+          </template>
+          <template v-else> # {{ activeTextChannelName }} </template>
+        </h2>
         <div class="spacer"></div>
         <v-btn
           icon
@@ -32,45 +38,98 @@
         </v-btn>
       </div>
     </v-navigation-drawer>
-    <section class="content-scroll scope-main ">
-      <v-card flat class="messages-theme  pa-0" color="transparent">
-        <ChatWindow context="channel" :channel-id="activeTextChannelId" />
+
+    <section class="content-scroll scope-main">
+      <v-card flat class="messages-theme pa-0" color="transparent">
+        <!-- Авторское сообщество -->
+        <template v-if="isAuthorCommunity && authorCommunityId">
+          <!-- Режим ЛЕНТЫ постов -->
+          <ChatWindow
+            v-if="!selectedPostId"
+            mode="author-main"
+            context="channel"
+            :channel-id="activeTextChannelId"
+            :author-id="authorCommunityId"
+            :is-author="isCurrentUserAuthor"
+            @open-post-comments="onOpenPostComments"
+          />
+
+          <!-- Режим КОММЕНТАРИЕВ К ОДНОМУ ПОСТУ -->
+          <AuthorPostWithComments
+            v-else
+            :post-id="selectedPostId"
+            :group-id="authorCommunityId"
+            @close="selectedPostId = ''"
+          />
+        </template>
+
+        <!-- Обычный канал -->
+        <ChatWindow
+          v-else
+          mode="default"
+          context="channel"
+          :channel-id="activeTextChannelId"
+        />
       </v-card>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useDisplay } from "vuetify";
 import ChatWindow from "../chat/ChatWindow.vue";
+import AuthorPostWithComments from "@/components/authors/AuthorPostWithComments.vue";
 
-defineProps<{
+const props = defineProps<{
   activeTextChannelName: string;
   activeTextChannelId: string;
   isVideoRoomOpen: boolean;
+  isAuthorCommunity?: boolean;
+  authorCommunityId?: string;
 }>();
 
 defineEmits(["toggle-users", "toggle-video"]);
 
 const { smAndDown } = useDisplay();
 const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
+
+const isAuthorCommunity = computed(() => props.isAuthorCommunity === true);
+const authorCommunityId = computed(() => props.authorCommunityId || "");
+
+const selectedPostId = ref<string>("");
+
+// const account = useUserAccountStore();
+// const authorsStore = useAuthorsStore();
+const isCurrentUserAuthor = computed(() => {
+  if (!isAuthorCommunity.value || !authorCommunityId.value) return false;
+  // TODO: подставить реальную проверку автора
+  return true;
+});
+
+function onOpenPostComments(postId: string) {
+  selectedPostId.value = postId;
+}
 </script>
 
 <style scoped>
+/* твой стиль без изменений */
 .scope-hdr {
   --v-theme-surface: var(--topnav-background);
   --v-theme-on-surface: var(--topnav-on-surface);
   --v-theme-outline: var(--topnav-border);
   --v-theme-surface-variant: var(--topnav-elev-1);
 }
-.content-area{
+.content-area {
   border: 0px;
 }
 .content-header-drawer {
   border-bottom: 1px solid var(--topnav-border, var(--app-outline-variant));
   border-top: 1px solid var(--topnav-border, var(--app-outline-variant));
-  background: var(--topnav-elev-1, var(--topnav-background, var(--app-surface)));
+  background: var(
+    --topnav-elev-1,
+    var(--topnav-background, var(--app-surface))
+  );
 }
 .content-header {
   display: flex;
@@ -82,7 +141,6 @@ const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
 .content-header .spacer {
   flex: 1;
 }
-
 .scope-main {
   --v-theme-surface: var(--main-background);
   --v-theme-on-surface: var(--main-on-surface);
@@ -106,8 +164,8 @@ const headerHeight = computed(() => (smAndDown.value ? 58 : 66));
 .scroll-y {
   height: 100%;
   overflow: auto;
-  -ms-overflow-style: none; /* IE/Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .scroll-y::-webkit-scrollbar {
   width: 0;

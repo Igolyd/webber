@@ -256,7 +256,11 @@ import { useGroupsStore } from "@/stores/groups";
 import { useRolesStore, type Role } from "@/stores/roles";
 import GroupMemberProfileCard from "./Profiles/GroupMemberProfileCard.vue";
 
-const props = defineProps<{ modelValue: boolean; isSmAndDown: boolean }>();
+const props = defineProps<{
+  modelValue: boolean;
+  isSmAndDown: boolean;
+  groupId?: string;
+}>();
 const emit = defineEmits(["update:modelValue", "view-user", "context-user"]);
 
 const model = computed({
@@ -268,7 +272,9 @@ const usersStore = useUsersStore();
 const groupsStore = useGroupsStore();
 const rolesStore = useRolesStore();
 
-const activeGroupId = computed(() => groupsStore.activeGroupId);
+const activeGroupId = computed(
+  () => props.groupId ?? groupsStore.activeGroupId
+);
 
 const users = computed<AppUser[]>(() =>
   !activeGroupId.value ? [] : usersStore.getUsersByGroup(activeGroupId.value)

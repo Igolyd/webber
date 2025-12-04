@@ -1,14 +1,17 @@
-<!-- components/Settings/SettingsProfileUser.vue -->
+<!-- pages/SettingsProfileUser.vue -->
 <template>
   <div class="settings-profile-user d-flex">
     <SettingsPanel class="mr-4" @navigate="onNavigate" />
-    <div class="flex-grow-1">
-      <ClientOnly>
-        <component :is="currentComponent" :key="currentKey" />
-        <template #placeholder>
-          <div class="skeleton">Загрузка…</div>
-        </template>
-      </ClientOnly>
+    <div class="settings-main">
+      <!-- Область под контент секции -->
+      <div class="settings-main-content">
+        <ClientOnly>
+          <component :is="currentComponent" :key="currentKey" />
+          <template #placeholder>
+            <div class="skeleton">Загрузка…</div>
+          </template>
+        </ClientOnly>
+      </div>
 
       <!-- Общая панель действий -->
       <ActionsBar
@@ -243,5 +246,23 @@ export default defineComponent({
 <style scoped>
 .settings-profile-user {
   gap: 16px;
+  height: 100vh; /* высота всего layout = высота окна */
+  overflow: hidden; /* не даём странице прокручиваться сама */
+}
+
+/* Правый столбец: контент сверху, ActionsBar снизу */
+.settings-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Область под контент секции — растягивается от верха до ActionsBar */
+.settings-main-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden; /* скролл будет уже в дочернем контейнере секции */
 }
 </style>

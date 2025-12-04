@@ -24,7 +24,7 @@
       />
     </div>
     <v-divider />
-    <v-list  class="py-0" density="comfortable">
+    <v-list class="py-0" density="comfortable">
       <DirectorySection
         v-for="section in directoriesWithChannels"
         :key="section.dir.id"

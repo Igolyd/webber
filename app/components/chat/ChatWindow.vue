@@ -62,7 +62,16 @@
             <!-- Тело -->
             <div class="msg-body">
               <div v-if="isGroupStart(idx)" class="msg-header">
-                <span class="msg-author">{{ senderName(m) }}</span>
+                <span class="msg-author">
+                  {{ senderName(m) }}
+                  <!-- Бейдж "Пост" для сообщений автора в режиме author-main -->
+                  <span
+                    v-if="isAuthorMode && isAuthorPost(m)"
+                    class="post-badge"
+                  >
+                    Пост
+                  </span>
+                </span>
                 <span class="msg-time">
                   {{ fmtTime(m.createdAt) }}
                   <span v-if="m.editedAt" class="edited-tag"> • изменено</span>
@@ -435,6 +444,19 @@
                     </v-menu>
                   </div>
                 </div>
+                <div v-if="isAuthorMode && isAuthorPost(m)" class="post-footer">
+                  <v-btn
+                    size="x-small"
+                    variant="text"
+                    @click="onOpenComments(m)"
+                  >
+                    <v-icon size="16" start>mdi-comment-text-outline</v-icon>
+                    Комментировать
+                    <span v-if="commentsCountForMessage(m)"
+                      >&nbsp;({{ commentsCountForMessage(m) }})</span
+                    >
+                  </v-btn>
+                </div>
               </div>
             </div>
           </div>
@@ -453,13 +475,14 @@
     </div>
 
     <!-- Композер -->
-    <div class="composer">
+    <div v-if="showComposer" class="composer">
       <InputMulti
         ref="composerRef"
         v-model="draft"
         :context="props.context"
         :me-id="meReactionsId"
         :group-id="props.context === 'channel' ? inferredGroupId : undefined"
+        :disabled="composerDisabled"
         @send="send"
         @gif="gifSend"
         @attach="onAttach"
@@ -668,6 +691,7 @@ import ChatVideoControls from "./ChatVideoControls.vue";
 import AlertSendDialog from "@/components/alerts/AlertSendDialog.vue";
 import AlertOverlayStack from "@/components/alerts/AlertOverlayStack.vue";
 import PackPreviewDialog from "@/components/market/PackPreviewDialog.vue";
+import { useAuthorCommentsStore } from "@/stores/authorComments";
 
 type CommonAttachment = DMFile | CHFile;
 
@@ -693,9 +717,22 @@ const props = defineProps<{
   channelId?: string;
   groupId?: string;
   peerId?: string;
+
+  // НОВОЕ:
+  mode?: "default" | "author-main"; // по умолчанию обычный чат
+  authorId?: string; // id автора/владельца комьюнити
+  isAuthor?: boolean; // текущий пользователь — автор?
 }>();
+
+const emit = defineEmits<{
+  (e: "open-post-comments", postId: string): void;
+}>();
+const commentsStore = useAuthorCommentsStore();
 const meAuthId = computed(() => account.userId || ""); // для сообщений
 const meReactionsId = computed(() => profiles.profileId || meAuthId.value); // для паков
+
+const mode = computed(() => props.mode || "default");
+const isAuthorMode = computed(() => mode.value === "author-main");
 
 const profiles = useProfilesStore();
 const account = useUserAccountStore();
@@ -736,7 +773,20 @@ const items = computed<CommonMessage[]>(() => {
 const draft = ref("");
 const hoverId = ref<string | null>(null);
 const highlightedId = ref<string | null>(null);
+const showComposer = computed(() => {
+  // DM/обычный канал — всегда показываем
+  if (!isAuthorMode.value) return true;
+  // В режиме author-main показываем composer тоже всем,
+  // но сам ввод заблокируем для не-автора (если хочешь — можешь тут вернуть props.isAuthor)
+  return true;
+});
 
+const composerDisabled = computed(() => {
+  // В обычном чате — не блокируем
+  if (!isAuthorMode.value) return false;
+  // В author-main: только автор может писать в главную ленту
+  return !props.isAuthor;
+});
 const alertDialog = ref(false);
 function openAlertDialog() {
   alertDialog.value = true;
@@ -767,6 +817,20 @@ function videoSourcesFromAttachment(att: CommonAttachment) {
 }
 function videoPosterFromAttachment(_att: CommonAttachment) {
   return undefined as string | undefined;
+}
+function isAuthorPost(m: CommonMessage) {
+  if (!isAuthorMode.value || !props.authorId) return false;
+  if (m.senderId === props.authorId) return true;
+  return (m as any).isAuthorPost === true;
+}
+function commentsCountForMessage(m: CommonMessage) {
+  if (!("id" in m)) return 0;
+  return commentsStore.getByPost(m.id).length;
+}
+function onOpenComments(m: CommonMessage) {
+  // открывать можно только для постов автора
+  if (!isAuthorPost(m)) return;
+  emit("open-post-comments", m.id);
 }
 // DOM-рефы для скролла к сообщениям
 const msgElMap = new Map<string, HTMLElement>();
@@ -1029,13 +1093,35 @@ function confirmSendAttachment() {
 function send() {
   const text = draft.value.trim();
   if (!text || !meId.value) return;
+
   if (props.context === "dm") {
     if (!props.peerId) return;
     dmStore.sendMessage(meId.value, props.peerId, text, replyTo.value?.id);
   } else {
     if (!props.channelId) return;
-    chStore.sendMessage(meId.value, props.channelId, text, replyTo.value?.id);
+
+    // Обычная отправка
+    const msg = chStore.sendMessage(
+      meId.value,
+      props.channelId,
+      text,
+      replyTo.value?.id
+    );
+
+    // Если это автор в режиме author-main — помечаем как пост
+    if (msg && isAuthorMode.value && props.isAuthor) {
+      // лёгкий патч: обновим флаг isAuthorPost
+      chStore.editMessage(msg.id, {
+        content: msg.content,
+        attachment: msg.attachment ?? null,
+      });
+      // и вручную допишем флаг (т.к. editMessage сейчас его не меняет):
+      chStore.messages = chStore.messages.map((m) =>
+        m.id === msg.id ? { ...m, isAuthorPost: true } : m
+      );
+    }
   }
+
   draft.value = "";
   replyTo.value = null;
 }

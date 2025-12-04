@@ -21,6 +21,8 @@
             no-resize
             :placeholder="placeholder"
             hide-details
+            :readonly="props.disabled"
+            :disabled="props.disabled"
             @input="onInputLimit"
             @paste="onPasteLimit"
             @keydown.enter.exact.prevent="onSubmit"
@@ -230,6 +232,7 @@
           <v-btn
             icon="mdi-paperclip"
             size="small"
+            :disabled="props.disabled"
             variant="text"
             :title="'Прикрепить файл'"
             @click="triggerFile"
@@ -245,6 +248,7 @@
           <v-btn
             icon="mdi-bullhorn-outline"
             size="small"
+            :disabled="props.disabled"
             variant="text"
             :title="'Отправить алерт'"
             @click="emit('alert')"
@@ -255,7 +259,7 @@
             class="btn-primary-tonal"
             size="small"
             variant="plain"
-            :disabled="!innerLimited.trim()"
+            :disabled="!innerLimited.trim() || props.disabled"
             @click="onSubmit"
           >
             <v-icon start size="16">mdi-send</v-icon>
@@ -281,6 +285,7 @@ const props = defineProps<{
   context?: "dm" | "channel";
   meId?: string;
   groupId?: string;
+  disabled?: boolean; // НОВОЕ
 }>();
 
 type StickerMeta = { kind: "emoji" | "sticker"; packId?: string | null };
@@ -574,6 +579,7 @@ function onFilePicked(e: Event) {
 
 // Отправка
 function onSubmit() {
+  if (props.disabled) return;
   const text = (innerLimited.value || "").trim();
   if (!text) return;
   emit("send");

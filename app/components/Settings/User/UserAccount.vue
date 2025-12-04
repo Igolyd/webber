@@ -301,7 +301,6 @@ export default defineComponent({
   border-radius: 12px;
 }
 .settings-content-scroll {
-  max-height: calc(100vh - 280px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
