@@ -44,6 +44,35 @@ function makeConvoKey(a: string, b: string) {
 export const useMessagesStore = defineStore("messages", () => {
   const messages = useStorage<DirectMessage[]>("app.dm", []);
 
+  const entityReactions = useStorage<Record<string, Record<string, string[]>>>(
+    "app.entityReactions",
+    {}
+  );
+
+  function makeEntityKey(kind: string, id: string) {
+    return `${kind}:${id}`;
+  }
+
+  function getEntityReactions(kind: string, id: string) {
+    const key = makeEntityKey(kind, id);
+    return entityReactions.value[key] || {};
+  }
+
+  function toggleEntityReaction(
+    kind: string,
+    id: string,
+    emoji: string,
+    userId: string
+  ) {
+    const key = makeEntityKey(kind, id);
+    const current = entityReactions.value[key] || {};
+    const users = new Set(current[emoji] || []);
+    if (users.has(userId)) users.delete(userId);
+    else users.add(userId);
+    const next = { ...current, [emoji]: Array.from(users) };
+    entityReactions.value = { ...entityReactions.value, [key]: next };
+  }
+
   const convoKey = (a: string, b: string) => makeConvoKey(a, b);
 
   const getConversation = (a: string, b: string) => {
@@ -203,5 +232,7 @@ export const useMessagesStore = defineStore("messages", () => {
     clearConversation,
     toggleReaction,
     togglePin,
+    getEntityReactions,
+    toggleEntityReaction,
   };
 });

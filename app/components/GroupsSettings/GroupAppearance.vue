@@ -379,7 +379,7 @@ function resetSection(key: string) {
 </script>
 <style scoped>
 .scroll-y {
-  max-height: calc(100vh - 220px);
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

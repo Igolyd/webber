@@ -1,6 +1,6 @@
 <!-- components/Settings/User/UserIntegrations.vue -->
 <template>
-  <v-container class="scope-main">
+  <v-container class="scope-main scroll-y">
     <v-card class="main-card">
       <v-card-title>Интеграции</v-card-title>
       <v-card-text>
@@ -77,5 +77,17 @@ export default defineComponent({
   border: 1px solid var(--main-border) !important;
   box-shadow: none;
   border-radius: 12px;
+}
+.scroll-y {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-y::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.scroll-y {
+  scrollbar-width: none;
 }
 </style>

@@ -224,25 +224,20 @@ export default defineComponent({
       set: (v: boolean) => emit("update:modelValue", v),
     });
 
-    // 1: Группы, 2: Личные сообщения, 3: Авторы
-    const activeCategoryId = ref<number>(props.categoryId || 1); // 1: группы, 2: ЛС, 3: авторы
-    const activeCategoryName = computed(() => {
-      switch (activeCategoryId.value) {
-        case 1:
-          return "Группы";
-        case 2:
-          return "Личные сообщения";
-        case 3:
-          return "Авторы";
-        default:
-          return "Группы";
-      }
-    });
+    const activeCategoryId = ref<number>(props.categoryId || 1);
+    const activeCategoryName = ref<string>(
+      props.categoryName ||
+        (activeCategoryId.value === 1
+          ? "Группы"
+          : activeCategoryId.value === 2
+          ? "Личные сообщения"
+          : "Авторы")
+    );
 
     watch(
       () => props.categoryId,
       (v) => {
-        if (v && v !== activeCategoryId.value) {
+        if (typeof v === "number" && v !== activeCategoryId.value) {
           activeCategoryId.value = v;
           activeCategoryName.value =
             v === 1 ? "Группы" : v === 2 ? "Личные сообщения" : "Авторы";
@@ -252,10 +247,9 @@ export default defineComponent({
 
     watch(activeCategoryId, (v) => {
       emit("update:categoryId", v);
-      emit(
-        "update:categoryName",
-        v === 1 ? "Группы" : v === 2 ? "Личные сообщения" : "Авторы"
-      );
+      const name = v === 1 ? "Группы" : v === 2 ? "Личные сообщения" : "Авторы";
+      activeCategoryName.value = name;
+      emit("update:categoryName", name);
     });
 
     const isGroupsActive = computed(() => activeCategoryId.value === 1);
@@ -447,7 +441,18 @@ export default defineComponent({
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--lnav-background);
+  background: linear-gradient(
+    to top,
+    /* низ — почти белый, но с тоном темы */
+      color-mix(
+        in srgb,
+        var(--lnav-background) 70%,
+        var(--gradient-bg-color) 30%
+      )
+      0%,
+    /* дальше — нормальный цвет темы */ var(--lnav-background) 60%,
+    var(--lnav-background) 100%
+  );
   pointer-events: none;
   z-index: 0;
 }

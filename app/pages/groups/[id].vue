@@ -12,6 +12,8 @@
       :selected-group-name="selectedGroupName"
       :directories-with-channels="directoriesWithChannels"
       :active-text-channel-id="state.activeTextChannelId"
+      :owner-type="'group'"
+      :owner-id="currentGroupId"
       @open-group-settings="openGroupSettings"
       @invite-people="invitePeople"
       @open-create-channel="openCreateChannel"
@@ -26,6 +28,8 @@
       @edit-channel="openEditChannel"
       @delete-channel="deleteChannel"
       @channel-click="handleChannelClick"
+      @open-news-feed="openNewsFeed"
+      @open-events-feed="openEventsFeed"
     >
       <template #append>
         <MyProfileTabNavigation class="px-1 pb-1" />
@@ -37,6 +41,9 @@
       :active-text-channel-name="activeTextChannelName"
       :active-text-channel-id="state.activeTextChannelId"
       :is-video-room-open="isVideoRoomOpen"
+      :view-mode="viewMode"
+      :owner-type="'group'"
+      :owner-id="currentGroupId"
       @toggle-users="toggleUsersDrawer"
       @toggle-video="toggleVideoRoom"
     />
@@ -51,6 +58,26 @@
       v-model="directoryDialog"
       :directory="editingDirectory"
       @submit="onSubmitDirectory"
+    />
+    <CreateNewsDialog
+      v-model="newsDialog"
+      owner-type="group"
+      :owner-id="currentGroupId"
+      @created="
+        () => {
+          viewMode.value = 'news';
+        }
+      "
+    />
+    <CreateEventDialog
+      v-model="eventDialog"
+      owner-type="group"
+      :owner-id="currentGroupId"
+      @created="
+        () => {
+          viewMode.value = 'events';
+        }
+      "
     />
   </v-container>
 </template>
@@ -76,6 +103,8 @@ import { useRolesStore } from "~/stores/roles";
 import { useAppearanceStore } from "~/stores/app/appearance";
 import { useThemeOverrideStore } from "~/stores/app/themeOverride";
 import { useGroupThemesStore } from "~/stores/groupThemes";
+import CreateNewsDialog from "~/components/news/CreateNewsDialog.vue";
+import CreateEventDialog from "~/components/news/CreateEventDialog.vue";
 
 const ui = useUiStore();
 const call = useCallStore();
@@ -87,11 +116,9 @@ const channelsStore = useChannelsStore();
 const directoriesStore = useDirectoriesStore();
 const usersStore = useUsersStore();
 const rolesStore = useRolesStore();
-
 const appearance = useAppearanceStore();
 const themeOverride = useThemeOverrideStore();
 const groupThemes = useGroupThemesStore();
-
 const { smAndDown } = useDisplay();
 const isSmAndDown = computed(() => smAndDown.value);
 const channelsDrawer = ref(true);
@@ -102,6 +129,8 @@ const state = reactive({
 });
 const channelDialog = ref(false);
 const directoryDialog = ref(false);
+const newsDialog = ref(false);
+const eventDialog = ref(false);
 const editingChannel = ref<
   | {
       id: string;
@@ -167,16 +196,11 @@ function openCreateChannel() {
   editingChannel.value = undefined;
   channelDialog.value = true;
 }
-
 async function bootstrapGroup() {
-  // 1) Обеспечить наличие данных
   groupsStore.ensureSeed();
   usersStore.ensureSeed();
-
   const gid = currentGroupId.value;
   const group = groupsStore.getById(gid);
-
-  // 2) Если такой группы нет — редирект на первую доступную
   if (!group) {
     const fallback = groupsStore.groups[0]?.id;
     if (fallback) {
@@ -184,11 +208,8 @@ async function bootstrapGroup() {
     }
     return;
   }
-  // 3) Активируем группу и прогреваем базовые сущности
   groupsStore.setActiveGroup(gid);
   rolesStore.ensureBaseRolesForGroup(gid);
-
-  // Каналы/директории — как было
   ensureActiveGroupAndSeed();
 }
 function openEditChannel(chId: string) {
@@ -232,15 +253,10 @@ function onSubmitChannel(payload: {
   directoryId: string | null;
 }) {
   if (!currentGroupId.value) return;
-
-  // Редактирование существующего
   if (payload.id) {
     const prev = channelsStore.getById(payload.id);
     if (!prev) return;
-
-    // Смена типа: text -> voice
     if (prev.type === "text" && payload.type === "voice") {
-      // создаём комнату в Janus
       call
         .createJanusRoom({
           description: `${payload.name} (${currentGroupId.value})`,
@@ -258,8 +274,6 @@ function onSubmitChannel(payload: {
         });
       return;
     }
-
-    // Смена типа: voice -> text (по желанию удаляем комнату Janus)
     if (prev.type === "voice" && payload.type === "text") {
       const rid = prev.janusRoomId;
       channelsStore.updateChannel(payload.id, {
@@ -275,8 +289,6 @@ function onSubmitChannel(payload: {
       }
       return;
     }
-
-    // Обычное обновление без смены типа
     channelsStore.updateChannel(payload.id, {
       name: payload.name,
       type: payload.type,
@@ -284,18 +296,13 @@ function onSubmitChannel(payload: {
     });
     return;
   }
-
-  // Создание нового
   const nextPos = channelsStore.getByGroup(currentGroupId.value).length + 1;
-
   if (payload.type === "voice") {
-    // 1) Сначала создаём комнату на Janus
     call
       .createJanusRoom({
         description: `${payload.name} (${currentGroupId.value})`,
       })
       .then((roomId) => {
-        // 2) Добавляем канал с привязкой
         const ch = channelsStore.addChannel({
           groupId: currentGroupId.value,
           name: payload.name,
@@ -304,7 +311,6 @@ function onSubmitChannel(payload: {
           position: nextPos,
           janusRoomId: roomId,
         });
-        // текстовые активируем, голосовые — по клику
       })
       .catch((e) => {
         console.error("Failed to create Janus room", e);
@@ -339,21 +345,15 @@ function onSubmitDirectory(payload: { id?: string; name: string }) {
 function deleteChannel(id: string) {
   const ch = channelsStore.getById(id);
   if (!ch) return;
-
-  // Если сейчас находимся в этой комнате — выходим из звонка
   if (call.activeVoiceChannelId === id) {
     call.leaveCall().catch(() => {});
   }
-
-  // Если голосовой с привязкой — удаляем комнату на Janus
   if (ch.type === "voice" && typeof ch.janusRoomId === "number") {
     call.destroyJanusRoom(ch.janusRoomId).catch((e) => {
       console.warn("Failed to destroy Janus room", e);
     });
   }
-
   channelsStore.removeChannel(id);
-
   if (state.activeTextChannelId === id) {
     const firstText = channelsStore
       .getByGroup(currentGroupId.value)
@@ -376,7 +376,6 @@ function toggleDirectory(id: string) {
 function handleChannelClick(ch: Channel) {
   if (ch.type === "voice") {
     if (call.isJoining) return;
-
     if (!call.callEnabled || call.activeVoiceChannelId !== ch.id) {
       call.joinVoiceChannel(ch.id, profiles.name || "User");
     } else if (call.activeVoiceChannelId === ch.id) {
@@ -390,6 +389,21 @@ function handleChannelClick(ch: Channel) {
   } else {
     selectTextChannel(ch.id);
   }
+}
+const viewMode = ref<"channel" | "news" | "events">("channel");
+function openNewsFeed() {
+  viewMode.value = "news";
+  router.replace({ query: { ...route.query, tab: "news" } });
+}
+function openEventsFeed() {
+  viewMode.value = "events";
+  router.replace({ query: { ...route.query, tab: "events" } });
+}
+function selectTextChannel(id: string) {
+  state.activeTextChannelId = id;
+  viewMode.value = "channel";
+  const { tab, ...rest } = route.query;
+  router.replace({ query: { ...rest } });
 }
 function ensureActiveGroupAndSeed() {
   const gid = currentGroupId.value;
@@ -468,6 +482,15 @@ watch(
   () => appearance.preferPersonalThemeInGroups,
   () => applyGroupThemeIfNeeded()
 );
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab === "news") viewMode.value = "news";
+    else if (tab === "events") viewMode.value = "events";
+    else viewMode.value = "channel";
+  },
+  { immediate: true }
+);
 function navigateToGroup(groupId: string) {
   router.push(`/groups/${groupId}`);
 }
@@ -478,19 +501,16 @@ function invitePeople() {
   console.log("invite people");
 }
 function createEvent() {
-  console.log("create event");
+  eventDialog.value = true;
 }
 function publishNews() {
-  console.log("publish news");
+  newsDialog.value = true;
 }
 function openNotificationSettings() {
   console.log("open notification settings");
 }
 function openPrivacySettings() {
   console.log("open privacy settings");
-}
-function selectTextChannel(id: string) {
-  state.activeTextChannelId = id;
 }
 const toggleChannelsDrawer = () =>
   (channelsDrawer.value = !channelsDrawer.value);
@@ -501,7 +521,6 @@ const isVideoRoomOpen = computed({
   set: (v) => (state.isVideoRoomOpen = v),
 });
 </script>
-
 <style scoped>
 .h-100 {
   height: 100%;
@@ -512,7 +531,5 @@ const isVideoRoomOpen = computed({
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1f1f1f;
 }
-/* Удалено: .video-room-overlay */
 </style>

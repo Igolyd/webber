@@ -10,9 +10,10 @@
       :temporary="isSmAndDown"
       width="320"
       location="right"
+      class="theme-drawer-right"
       app
     >
-      <div v-if="peer" class="pa-4">
+      <v-card v-if="peer" class="pa-4 right-drawer">
         <v-avatar size="96" class="mb-3">
           <v-img :src="peer.avatar || '/avatars/default.jpg'" />
         </v-avatar>
@@ -40,7 +41,7 @@
           @click="askRemoveFriend(peer.id)"
           >Удалить из друзей</v-btn
         >
-      </div>
+      </v-card>
     </v-navigation-drawer>
     <div class="content-area">
       <v-navigation-drawer
@@ -186,9 +187,37 @@ const confirmRemoveConfirm = () => {
 .content-header-drawer {
   border-bottom: 1px solid var(--app-border-color);
   border-top: 1px solid var(--app-border-color);
-  background: color-mix(in oklab, var(--app-surface) 70%, transparent);
 }
-
+.theme-drawer-right {
+  background-color: transparent !important;
+  color: var(--rnav-on-surface);
+  box-shadow: none !important;
+  border: 0px;
+}
+.theme-drawer-right :deep(.v-navigation-drawer__content) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--rnav-surface);
+  color: var(--rnav-on-surface);
+}
+:deep(.right-drawer) {
+  background: linear-gradient(
+    to top,
+    /* низ — почти белый, но с тоном темы */
+      color-mix(
+        in srgb,
+        var(--lnav-background) 70%,
+        var(--gradient-bg-color) 30%
+      )
+      0%,
+    /* дальше — нормальный цвет темы */ var(--rnav-elev-1) 60%,
+    var(--rnav-elev-1) 100%
+  );
+  color: var(--rnav-on-surface);
+  flex-direction: column;
+  flex: 1 1 auto;
+}
 .content-header {
   display: flex;
   align-items: center;

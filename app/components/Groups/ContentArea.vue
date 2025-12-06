@@ -41,9 +41,17 @@
 
     <section class="content-scroll scope-main">
       <v-card flat class="messages-theme pa-0" color="transparent">
-        <!-- Авторское сообщество -->
-        <template v-if="isAuthorCommunity && authorCommunityId">
-          <!-- Режим ЛЕНТЫ постов -->
+        <!-- Режим НОВОСТЕЙ / СОБЫТИЙ -->
+        <template v-if="viewMode === 'news' || viewMode === 'events'">
+          <NewsEventsFeed
+            :mode="viewMode"
+            :owner-type="ownerType"
+            :owner-id="ownerId"
+          />
+        </template>
+
+        <!-- Авторское сообщество (лента постов/комменты) -->
+        <template v-else-if="isAuthorCommunity && authorCommunityId">
           <ChatWindow
             v-if="!selectedPostId"
             mode="author-main"
@@ -53,8 +61,6 @@
             :is-author="isCurrentUserAuthor"
             @open-post-comments="onOpenPostComments"
           />
-
-          <!-- Режим КОММЕНТАРИЕВ К ОДНОМУ ПОСТУ -->
           <AuthorPostWithComments
             v-else
             :post-id="selectedPostId"
@@ -80,6 +86,7 @@ import { computed, ref } from "vue";
 import { useDisplay } from "vuetify";
 import ChatWindow from "../chat/ChatWindow.vue";
 import AuthorPostWithComments from "@/components/authors/AuthorPostWithComments.vue";
+import NewsEventsFeed from "../chat/NewsEventsFeed.vue";
 
 const props = defineProps<{
   activeTextChannelName: string;
@@ -87,6 +94,9 @@ const props = defineProps<{
   isVideoRoomOpen: boolean;
   isAuthorCommunity?: boolean;
   authorCommunityId?: string;
+  viewMode?: "channel" | "news" | "events";
+  ownerType?: "group" | "author";
+  ownerId?: string;
 }>();
 
 defineEmits(["toggle-users", "toggle-video"]);
@@ -98,7 +108,9 @@ const isAuthorCommunity = computed(() => props.isAuthorCommunity === true);
 const authorCommunityId = computed(() => props.authorCommunityId || "");
 
 const selectedPostId = ref<string>("");
-
+const viewMode = computed(() => props.viewMode || "channel");
+const ownerType = computed(() => props.ownerType || "group");
+const ownerId = computed(() => props.ownerId || "");
 // const account = useUserAccountStore();
 // const authorsStore = useAuthorsStore();
 const isCurrentUserAuthor = computed(() => {
@@ -172,7 +184,6 @@ function onOpenPostComments(postId: string) {
   height: 0;
 }
 .scroll-y {
-  max-height: calc(100vh - 280px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }

@@ -23,7 +23,32 @@
         @open-privacy-settings="$emit('open-privacy-settings')"
       />
     </div>
+
     <v-divider />
+
+    <!-- НОВОЕ: плашки Новости / События -->
+    <div class="px-4 pt-2 pb-1 d-flex flex-column gap-1">
+      <v-chip
+        v-if="props.ownerId"
+        variant="flat"
+        color="primary"
+        class="mb-1"
+        @click="$emit('open-news-feed')"
+      >
+        <v-icon start size="16">mdi-newspaper-variant-outline</v-icon>
+        Новости
+      </v-chip>
+      <v-chip
+        v-if="props.ownerId"
+        variant="flat"
+        color="secondary"
+        class="mb-1"
+        @click="$emit('open-events-feed')"
+      >
+        <v-icon start size="16">mdi-calendar-star</v-icon>
+        События
+      </v-chip>
+    </div>
     <v-list class="py-0" density="comfortable">
       <DirectorySection
         v-for="section in directoriesWithChannels"
@@ -70,6 +95,8 @@ const props = defineProps<{
   selectedGroupName: string;
   directoriesWithChannels: Section[];
   activeTextChannelId: string;
+  ownerType?: "group" | "author";
+  ownerId?: string;
 }>();
 const emit = defineEmits([
   "update:modelValue",
@@ -87,6 +114,8 @@ const emit = defineEmits([
   "edit-channel",
   "delete-channel",
   "channel-click",
+  "open-news-feed",
+  "open-events-feed",
 ]);
 const lnavHasImage = computed(() => {
   if (typeof window === "undefined") return false;
@@ -108,9 +137,17 @@ const model = computed({
   --v-theme-surface-variant: var(--lnav-elev-1);
 }
 .theme-drawer-left {
-  background: var(
-    --lnav-background,
-    var(--app-surface, var(--v-theme-surface))
+  background: linear-gradient(
+    to top,
+    /* низ — почти белый, но с тоном темы */
+      color-mix(
+        in srgb,
+        var(--lnav-background) 70%,
+        var(--gradient-bg-color) 30%
+      )
+      0%,
+    /* дальше — нормальный цвет темы */ var(--lnav-background) 60%,
+    var(--lnav-background) 100%
   ) !important;
   color: var(
     --lnav-on-surface,
@@ -119,5 +156,8 @@ const model = computed({
   border-right: 1px solid var(--lnav-border, var(--app-outline-variant));
   border-top: 1px solid var(--lnav-border, var(--app-outline-variant));
   box-shadow: none !important;
+}
+.gap-1 {
+  gap: 4px;
 }
 </style>

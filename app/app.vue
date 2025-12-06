@@ -5,15 +5,24 @@
     <!-- Overlay для читаемости поверх картинок -->
     <div class="app-bg-overlay"></div>
 
-    <v-app-bar
-      color='var(--rnav-elev-1)'
-      elevation="0"
-      height="48"
-      >
+    <v-app-bar color="var(--rnav-elev-1)" elevation="0" height="48">
+      <template v-slot:image>
+        <v-img
+          gradient="
+      color-mix(
+        in srgb,
+        var(--lnav-background) 70%,
+        var(--gradient-bg-color) 30%
+      )
+      0%,
+     var(--rnav-elev-1) 60%,
+    var(--rnav-elev-1) 100%"
+        ></v-img>
+      </template>
       <v-spacer />
-      <v-avatar :size="40" :rounded="99999">
+      <!-- <v-avatar :size="40" :rounded="99999">
         <v-img :src="defaultLogo" cover />
-      </v-avatar>
+      </v-avatar> -->
       <v-spacer />
     </v-app-bar>
 
@@ -33,7 +42,7 @@
 
 <script setup lang="ts">
 import CallWindowProvider from "~/components/CallWindowProvider.vue";
-import defaultLogo from "./assets/app/logo.png";
+// import defaultLogo from "./assets/app/logo.png";
 import ThemeBridge from "./components/system/ThemeBridge.vue";
 import AlertOverlayStack from "./components/alerts/AlertOverlayStack.vue";
 import "vue-gif-emoji-picker/dist/style.css";
@@ -50,7 +59,6 @@ import "vue-gif-emoji-picker/dist/style.css";
 .theme-root {
   color: var(--app-text-color);
 }
-
 /* Общий фон-контейнер — одна «единая» картинка на всё приложение */
 .app-bg-base {
   position: fixed;
@@ -95,7 +103,4 @@ body,
 .v-app-bar {
   backdrop-filter: blur(6px);
 }
-
-
-
 </style>

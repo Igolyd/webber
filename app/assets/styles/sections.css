@@ -12,6 +12,18 @@
 }
 
 /* Основная область */
+.scope-main {
+  /* Привязываем Vuetify-шные переменные к секционным токенам main */
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+
+  background: var(--main-background);
+  color: var(--main-on-surface);
+}
+
+/* Список — прозрачный, фон берёт из .scope-main */
 .scope-main :where(.v-list) { background: transparent !important; }
 .scope-main :where(.v-list-item) { background: transparent !important; }
 .scope-main :where(.v-list-item:hover .v-list-item__overlay) {

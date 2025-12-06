@@ -10,10 +10,7 @@
   >
     <v-container class="functional-panel">
       <NuxtLink to="/">
-      <v-btn
-        icon="mdi-message-text-outline"
-        :title="'ЛС'"
-      ></v-btn>
+        <v-btn icon="mdi-message-text-outline" :title="'ЛС'"></v-btn>
       </NuxtLink>
 
       <v-btn icon @click="$emit('toggleChannels')" :title="'Каналы'">
@@ -84,10 +81,13 @@ const drawer = ref(true);
   --v-theme-surface-variant: var(--rnav-elev-1);
 }
 .theme-drawer-left {
-  background: var(
-    --rnav-elev-1,
-    var(--app-surface, var(--v-theme-surface))
-  ) !important;
+  background: linear-gradient(
+    to top,
+    /* низ — почти белый, но с тоном темы */
+    color-mix(in srgb, var(--lnav-background) 70%, var(--gradient-bg-color) 30%) 0%,
+    /* дальше — нормальный цвет темы */ var(--rnav-elev-1) 60%,
+    var(--rnav-elev-1) 100%
+  );
   color: var(
     --rnav-on-surface,
     var(--app-on-surface, var(--v-theme-on-surface))

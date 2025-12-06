@@ -3,7 +3,7 @@
   <v-container class="scope-main">
     <h2 class="text-h6 mb-4">Профиль группы</h2>
 
-    <v-card class="main-card">
+    <v-card class="main-card scroll-y">
       <v-card-text>
         <FormKit type="form" submit-label="Сохранить" @submit="saveMain">
           <v-row>
@@ -441,5 +441,17 @@ async function saveMain(values: any) {
   border: 1px solid var(--main-border) !important;
   box-shadow: none;
   border-radius: 12px;
+}
+.scroll-y {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-y::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.scroll-y {
+  scrollbar-width: none;
 }
 </style>

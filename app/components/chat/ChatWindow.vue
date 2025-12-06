@@ -30,9 +30,17 @@
     </div>
 
     <!-- Лента сообщений -->
-    <div ref="scrollPane" class="messages-scroll">
+    <div ref="scrollPane" class="messages-scroll" @scroll="onScroll">
       <v-list density="comfortable" class="messages-list">
         <template v-for="(m, idx) in items" :key="m.id">
+          <!-- Разделитель по датам -->
+          <div v-if="shouldShowDateDivider(idx)" class="date-separator">
+            <span class="date-separator__line"></span>
+            <span class="date-separator__label">
+              {{ formatDateLabel(m.createdAt) }}
+            </span>
+            <span class="date-separator__line"></span>
+          </div>
           <div
             class="message-row"
             :class="{
@@ -462,6 +470,19 @@
           </div>
         </template>
       </v-list>
+      <div v-if="showScrollDown" class="scroll-down-wrapper">
+        <v-fab-transition>
+          <v-btn
+            icon
+            color="primary"
+            elevation="4"
+            class="scroll-down-btn"
+            @click="scrollToBottom(true)"
+          >
+            <v-icon>mdi-arrow-down</v-icon>
+          </v-btn>
+        </v-fab-transition>
+      </div>
     </div>
 
     <!-- Бейдж ответа -->
@@ -848,15 +869,17 @@ watch(
   items,
   async () => {
     await nextTick();
-    scrollToBottom();
+    // Скроллим вниз только если пользователь был "у дна"
+    if (isAtBottom.value) {
+      scrollToBottom(false);
+    }
   },
   { deep: true }
 );
-onMounted(() => scrollToBottom());
-function scrollToBottom() {
-  const el = scrollPane.value;
-  if (el) el.scrollTop = el.scrollHeight;
-}
+
+onMounted(() => {
+  scrollToBottom(false);
+});
 function scrollToMessage(id: string, highlightOnly = false) {
   const container = scrollPane.value;
   const el = msgElMap.get(id);
@@ -896,7 +919,51 @@ function shortText(m: CommonMessage) {
   if (m.type === "file") return m.attachment?.name || "[файл]";
   return m.content?.slice(0, 160) || "";
 }
+const DAY_MS = 24 * 60 * 60 * 1000;
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function shouldShowDateDivider(idx: number) {
+  if (idx === 0) return true;
+  const curr = new Date(items.value[idx].createdAt);
+  const prev = new Date(items.value[idx - 1].createdAt);
+  return !isSameDay(curr, prev);
+}
+
+function formatDateLabel(iso: string) {
+  const d = new Date(iso);
+  const today = startOfDay(new Date());
+  const target = startOfDay(d);
+  const diffDays = Math.floor((today.getTime() - target.getTime()) / DAY_MS);
+
+  if (diffDays === 0) return "Сегодня";
+  if (diffDays === 1) return "Вчера";
+  if (diffDays === 2) return "Позавчера";
+
+  // Если в пределах текущего года — "12 декабря"
+  if (today.getFullYear() === d.getFullYear()) {
+    return d.toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+    });
+  }
+
+  // Старше года — "12.10.2024"
+  return d.toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 // Reply helpers
 const replyTo = ref<CommonMessage | null>(null);
 function onReply(m: CommonMessage) {
@@ -1448,6 +1515,36 @@ function openInPickerFromPreview(p: any) {
 function onCopiedFromPreview() {
   previewOpen.value = false;
 }
+const isAtBottom = ref(true);
+const showScrollDown = computed(
+  () => !isAtBottom.value && items.value.length > 0
+);
+const SCROLL_BOTTOM_THRESHOLD = 80; // пусть реально используется
+
+function onScroll(e: Event) {
+  const el = e.target as HTMLElement | null;
+  if (!el) return;
+
+  const scrollTop = el.scrollTop;
+  const clientHeight = el.clientHeight;
+  const scrollHeight = el.scrollHeight;
+
+  // считаем, что "внизу", если до конца осталось меньше порога
+  const atBottom =
+    scrollTop + clientHeight >= scrollHeight - SCROLL_BOTTOM_THRESHOLD;
+
+  isAtBottom.value = atBottom;
+}
+
+function scrollToBottom(smooth = false) {
+  const el = scrollPane.value;
+  if (!el) return;
+  if (smooth) {
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  } else {
+    el.scrollTop = el.scrollHeight;
+  }
+}
 </script>
 
 <style scoped>
@@ -1468,9 +1565,9 @@ function onCopiedFromPreview() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: calc(100vh - 280px);
-  height: 100%;
-  overflow: hidden; /* чтобы внешний контейнер не скроллился */
+  max-height: calc(100vh - 80px);
+  overflow: hidden;
+  position: relative; /* чтобы абсолюты/стики работали внутри */
 }
 .pinned-bar {
   display: flex;
@@ -1483,18 +1580,17 @@ function onCopiedFromPreview() {
 .pinned-list {
   min-width: 320px;
 }
+/* Оставь одно определение messages-scroll, вот это */
 .messages-scroll {
   flex: 1 1 auto;
   padding: 8px;
   padding-top: 0;
+  padding-bottom: 120px; /* запас под reply-bar + композер */
   background: transparent;
-
   overflow-y: auto;
   overflow-x: hidden;
-
-  /* Скрыть скроллбар, но оставить прокрутку */
-  -ms-overflow-style: none; /* IE/Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .messages-scroll::-webkit-scrollbar {
@@ -1730,5 +1826,50 @@ function onCopiedFromPreview() {
   object-fit: contain;
   display: inline-block;
   background: transparent;
+}
+.date-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0;
+  color: var(--app-on-surface-variant, #9aa0a6);
+  font-size: 12px;
+  text-transform: none;
+  user-select: none;
+}
+
+.date-separator__line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: color-mix(
+    in srgb,
+    var(--app-outline-variant, #3a3054) 40%,
+    transparent
+  );
+}
+
+.date-separator__label {
+  margin: 0 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--main-background, #181426) 60%,
+    transparent
+  );
+}
+/* обертка для кнопки — липнет к низу scroll-контейнера */
+.scroll-down-wrapper {
+  position: sticky;
+  bottom: 0px;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none; /* чтобы клики не блокировала */
+}
+
+/* сама кнопка кликабельная и поверх всего */
+.scroll-down-btn {
+  pointer-events: auto;
+  z-index: 10;
 }
 </style>

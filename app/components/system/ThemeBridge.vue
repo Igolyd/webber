@@ -69,47 +69,70 @@ const custom = useCustomThemeStore() as unknown as CustomThemeStoreLike;
 const override = useThemeOverrideStore() as unknown as ThemeOverrideLike;
 const vuetify: ThemeInstance = useTheme();
 
-const PRESETS: Record<"light" | "dark", Required<CustomTheme>> = {
-  light: {
-    textColor: "#281F40",
-    bgKind: "color",
-    bgColor: "#FBFAFF",
-    bgGradient: "",
-    bgImage: "",
-    bgSize: "cover",
-    bgRepeat: "no-repeat",
-    bgPosition: "center",
-    overlayColor: "#000000",
-    overlayOpacity: 0,
-    cardBg: "#FFFFFF",
-    borderColor: "#E8E3F4",
-    hoverColor: "rgba(0,0,0,0.06)",
-    primaryColor: "#927FBF",
-    surfaceVariantColor: "#F1EEFA",
-    sections: {},
-  },
-  dark: {
-    textColor: "#E2DCF4",
-    bgKind: "color",
-    bgColor: "#1A1526",
-    bgGradient: "",
-    bgImage: "",
-    bgSize: "cover",
-    bgRepeat: "no-repeat",
-    bgPosition: "center",
-    overlayColor: "#000000",
-    overlayOpacity: 0,
-    cardBg: "#201833",
-    borderColor: "#3F3556",
-    hoverColor: "rgba(255,255,255,0.08)",
-    primaryColor: "#A896E6",
-    surfaceVariantColor: "#37304F",
-    sections: {},
-  },
-};
+// const PRESETS: Record<"light" | "dark", Required<CustomTheme>> = {
+//   light: {
+//     textColor: "#281F40",
+//     bgKind: "color",
+//     bgColor: "#FBFAFF",
+//     bgGradient: "",
+//     bgImage: "",
+//     bgSize: "cover",
+//     bgRepeat: "no-repeat",
+//     bgPosition: "center",
+//     overlayColor: "#000000",
+//     overlayOpacity: 0,
+//     cardBg: "#FFFFFF",
+//     borderColor: "#E8E3F4",
+//     hoverColor: "rgba(0,0,0,0.06)",
+//     primaryColor: "#927FBF",
+//     surfaceVariantColor: "#F1EEFA",
+//     sections: {},
+//   },
+//   dark: {
+//     textColor: "#E2DCF4",
+//     bgKind: "color",
+//     bgColor: "#1A1526",
+//     bgGradient: "",
+//     bgImage: "",
+//     bgSize: "cover",
+//     bgRepeat: "no-repeat",
+//     bgPosition: "center",
+//     overlayColor: "#000000",
+//     overlayOpacity: 0,
+//     cardBg: "#201833",
+//     borderColor: "#3F3556",
+//     hoverColor: "rgba(255,255,255,0.08)",
+//     primaryColor: "#A896E6",
+//     surfaceVariantColor: "#37304F",
+//     sections: {},
+//   },
+// };
 
 let isApplying = false;
+function makeBasePresetFromSystem(
+  effective: SystemTheme
+): Required<CustomTheme> {
+  const v = systemVars[effective];
 
+  return {
+    textColor: v["--app-text-color"],
+    bgKind: "color", // системные темы у тебя цветовые; grad/image можно делать через override
+    bgColor: v["--app-bg-color"],
+    bgGradient: "",
+    bgImage: "",
+    bgSize: v["--app-bg-size"],
+    bgRepeat: v["--app-bg-repeat"],
+    bgPosition: v["--app-bg-position"],
+    overlayColor: v["--app-bg-overlay-color"],
+    overlayOpacity: Number(v["--app-bg-overlay-opacity"] ?? "0"),
+    cardBg: v["--app-card-bg"],
+    borderColor: v["--app-border-color"],
+    hoverColor: v["--app-hover-color"],
+    primaryColor: v["--app-primary"],
+    surfaceVariantColor: v["--app-surface-variant"],
+    sections: {}, // секционные overrides поверх systemVars задаются только через override.sections
+  };
+}
 function applyAll() {
   if (typeof window == "undefined" || typeof document == "undefined") return;
   if (isApplying) return;
@@ -141,21 +164,25 @@ function applyAll() {
     if (effective !== "custom") {
       // 1) Базовые переменные системной темы (включая секции по умолчанию)
       applyCssVarsRaw(systemVars[effective] as Record<string, string>);
+
       // 2) Vuetify цвета
       const def = systemVuetify[effective];
       applyVuetifyColors(
         def.dark ? "dark" : "light",
         def.colors as Record<string, string>
       );
-      // 3) Накатываем group override (фон/оверлей/секционные overrides)
-      const basePreset = def.dark ? PRESETS.dark : PRESETS.light;
+
+      // 3) Накатываем group override (фон/оверлей/секционные overrides) поверх systemVars
+      const basePreset = makeBasePresetFromSystem(effective);
       const data = override.override
         ? clampCustom({ ...basePreset, ...override.override })
         : basePreset;
+
+      // Переписываем только базовые фоновые переменные и секции (если bgKind=image/gradient или есть sections)
       applyBgAndBasicVars(data);
-      // 4) Прозрачность секций при bgKind=image/gradient + секционные overrides
       applySectionBackdropAndOverrides(data);
-      // 5) Фон документа
+
+      // 4) Фон документа
       applyBackgroundFromVars();
       return;
     }

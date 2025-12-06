@@ -51,7 +51,7 @@
           </v-card-text>
         </v-card>
 
-         <v-card title="Контакты" class="mb-4 main-card">
+        <v-card title="Контакты" class="mb-4 main-card">
           <v-card-text>
             <FormKit
               ref="contactsFormRef"
@@ -79,7 +79,7 @@
           </v-card-text>
         </v-card>
 
-       <v-card title="Безопасность" class="mb-4 main-card">
+        <v-card title="Безопасность" class="mb-4 main-card">
           <v-card-text>
             <FormKit
               ref="passwordFormRef"
@@ -110,7 +110,11 @@
           </v-card-text>
         </v-card>
 
-         <v-card title="Опасная зона" class="mb-4 main-card" color="red-lighten-5">
+        <v-card
+          title="Опасная зона"
+          class="mb-4 main-card"
+          color="red-lighten-5"
+        >
           <v-card-text>
             <v-btn color="red" @click="confirmDelete"
               >Удалить учётную запись</v-btn
@@ -286,6 +290,16 @@ export default defineComponent({
   width: 0;
   height: 0;
 }
+.settings-content-scroll {
+  max-height: calc(100vh - 40px);
+
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settings-content-scroll {
+  scrollbar-width: none;
+}
 .scope-main {
   --v-theme-surface: var(--main-background);
   --v-theme-on-surface: var(--main-on-surface);
@@ -299,13 +313,5 @@ export default defineComponent({
   border: 1px solid var(--main-border) !important;
   box-shadow: none;
   border-radius: 12px;
-}
-.settings-content-scroll {
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.settings-content-scroll {
-  scrollbar-width: none;
 }
 </style>

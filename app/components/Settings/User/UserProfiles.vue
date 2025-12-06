@@ -1,6 +1,6 @@
 <!-- components/Settings/User/UserProfiles.vue -->
 <template>
-  <v-container >
+  <v-container class="scroll-y">
     <v-tabs v-model="tab" grow>
       <v-tab value="main">Основной профиль</v-tab>
       <v-tab value="group-personal">Личный профиль группы</v-tab>
@@ -659,4 +659,16 @@ onBeforeUnmount(() => {
   background: var(--main-hover);
 }
 */
+.scroll-y {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-y::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.scroll-y {
+  scrollbar-width: none;
+}
 </style>

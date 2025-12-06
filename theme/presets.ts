@@ -82,6 +82,7 @@ export type CssVars = {
   "--topnav-hover": string;
   "--topnav-elev-1": string;
   "--topnav-bg-color": string;
+  "--topnav-gradient": string;
 
   "--composer-surface": string;
   "--composer-on-surface": string;
@@ -110,6 +111,8 @@ export type CssVars = {
   "--input-hover": string;
   "--input-elev-1": string;
   "--input-bg-color": string;
+
+  "--gradient-bg-color": string; //градиент цвета
 };
 
 // Хелпер секций для системных тем
@@ -213,12 +216,14 @@ function sectionDefaults(
     "--mymini-hover": hover,
     "--mymini-elev-1": v["--mymini-bg-color"],
 
-        // NEW: input
+    // NEW: input
     "--input-background": v["--input-bg-color"] ?? surface,
     "--input-on-surface": onSurface,
     "--input-border": border,
     "--input-hover": hover,
     "--input-elev-1": elev1,
+
+    "--gradient-bg-color": v["--gradient-bg-color"],
   } as CssVars;
 }
 
@@ -282,9 +287,6 @@ const violetLightVars = sectionDefaults({
   "--btn-outline-border": "#DDD4F1",
   "--btn-outline-hover": "rgba(142,123,207,0.10)",
 
-  "--main-bg-color": "#FFFFFF", //фон основного окна
-
-  "--topnav-bg-color": "#FFFFFF", //фон верхней навигации
   "--lnav-bg-color": "#f4ddff", //фон левой навигации
   "--mymini-bg-color": "#F5F1FE",
   "--input-bg-color": "#FFFFFF",
@@ -313,7 +315,7 @@ const violetDarkVuetify: ThemeDefinition = {
 };
 const violetDarkVars = sectionDefaults({
   "--app-text-color": "#E2DCF4",
-  "--app-bg-color": "#181426",
+  "--app-bg-color": "#0f0f0f", //задает общий задний цвет, используется пока в основных окнах и шапках.
   "--app-card-bg": "#201833",
   "--app-border-color": "#3A3054",
   "--app-bg-image": "none",
@@ -326,7 +328,7 @@ const violetDarkVars = sectionDefaults({
 
   "--app-surface": "#201833", //меняет левую навигацию
   "--app-surface-backdrop": "#201833",
-  "--app-surface-2": "#201833", //правая навигация и шапка
+  "--app-surface-2": "#260f47", //правая навигация и шапка
   "--app-surface-3": "#2C2147", //
   "--app-surface-variant": "#332A49",
   "--app-on-surface": "#E2DCF4",
@@ -349,11 +351,10 @@ const violetDarkVars = sectionDefaults({
   "--btn-outline-border": "#4D416B",
   "--btn-outline-hover": "rgba(168,150,230,0.10)",
 
-  "--main-bg-color": "#1a1526", //фон основного окна
-  "--topnav-bg-color": "#1a1526", //фон верхней навигации
-  "--lnav-bg-color": "#2C2147", //фон левой навигации
+  "--lnav-bg-color": "#3e1768", //фон левой навигации
   "--mymini-bg-color": "#332A49",
-  "--input-bg-color": "#2C2147", //фон поля ввода
+  "--input-bg-color": "#332a49", //фон поля ввода
+  "--gradient-bg-color": "#ffff00a",
 } as any);
 
 // ——— Синие
@@ -420,6 +421,9 @@ const blueLightVars = sectionDefaults({
   "--btn-outline-hover": "rgba(111,169,255,0.10)",
 
   "--input-bg-color": "#FFFFFF",
+  // "--lnav-bg-color": "#3e1768",
+  // "--mymini-bg-color": "#332A49",
+  // "--gradient-bg-color": "#fdf900",
 } as any);
 
 const blueDarkVuetify: ThemeDefinition = {
@@ -481,6 +485,9 @@ const blueDarkVars = sectionDefaults({
   "--btn-outline-hover": "rgba(75,148,248,0.12)",
 
   "--input-bg-color": "#1A2741",
+  // "--lnav-bg-color": "#3e1768",
+  // "--mymini-bg-color": "#332A49",
+  // "--gradient-bg-color": "#fdf900",
 } as any);
 
 // ——— Зелёные
@@ -547,6 +554,9 @@ const greenLightVars = sectionDefaults({
   "--btn-outline-hover": "rgba(71,199,142,0.10)",
 
   "--input-bg-color": "#FFFFFF",
+  // "--lnav-bg-color": "#3e1768",
+  // "--mymini-bg-color": "#332A49",
+  // "--gradient-bg-color": "#fdf900",
 } as any);
 
 const greenDarkVuetify: ThemeDefinition = {
@@ -671,6 +681,9 @@ const whiteLightVars = sectionDefaults({
   "--btn-outline-hover": "rgba(17,23,39,0.06)",
 
   "--input-bg-color": "#FFFFFF",
+  // "--lnav-bg-color": "#3e1768",
+  // "--mymini-bg-color": "#332A49",
+  // "--gradient-bg-color": "#fdf900",
 } as any);
 
 // ——— Void (чёрный+белый, фиолетовый только для акцентов)
@@ -733,6 +746,9 @@ const voidDarkVars = sectionDefaults({
   "--btn-outline-hover": "rgba(255,255,255,0.06)",
 
   "--input-bg-color": "#17171C",
+  // "--lnav-bg-color": "#3e1768",
+  // "--mymini-bg-color": "#332A49",
+  // "--gradient-bg-color": "#fdf900",
 } as any);
 
 // РЕЕСТР

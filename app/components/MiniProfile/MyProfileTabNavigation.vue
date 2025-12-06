@@ -477,7 +477,7 @@ export default defineComponent({
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--lnav-background);
+  /* background: var(--lnav-background); */
   z-index: 0;
 }
 .my-profile-container {

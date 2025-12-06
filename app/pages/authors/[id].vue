@@ -1,21 +1,19 @@
-<!-- pages/authors/[id].vue -->
 <template>
   <v-container fluid class="h-100 d-flex pa-0">
-    <!-- Левый столбец: SmallNavigationTab, но с сообществами авторов -->
     <SmallNavigationTab
       :groups="communitiesList"
       :selectedGroupId="currentAuthorId"
       @updateSelectedGroup="navigateToAuthor"
       @toggleChannels="toggleChannelsDrawer"
     />
-
-    <!-- Левый drawer каналов/директорий: тот же, что для групп -->
     <ChannelsDrawer
       v-model="channelsDrawer"
       :is-sm-and-down="isSmAndDown"
       :selected-group-name="selectedCommunityName"
       :directories-with-channels="directoriesWithChannels"
       :active-text-channel-id="state.activeTextChannelId"
+      :owner-type="'author'"
+      :owner-id="currentAuthorId"
       @open-group-settings="openAuthorSettings"
       @invite-people="invitePeople"
       @open-create-channel="openCreateChannel"
@@ -30,20 +28,18 @@
       @edit-channel="openEditChannel"
       @delete-channel="deleteChannel"
       @channel-click="handleChannelClick"
+      @open-news-feed="openNewsFeed"
+      @open-events-feed="openEventsFeed"
     >
       <template #append>
         <MyProfileTabNavigation class="px-1 pb-1" />
       </template>
     </ChannelsDrawer>
-
-    <!-- Правый drawer участников: один и тот же, но с явным group-id = id автора -->
     <UsersDrawer
       v-model="usersDrawer"
       :is-sm-and-down="isSmAndDown"
       :group-id="currentAuthorId"
     />
-
-    <!-- Центральный контент: ContentArea в режиме author -->
     <ContentArea
       class="content-area"
       :active-text-channel-name="activeTextChannelName"
@@ -51,11 +47,12 @@
       :is-video-room-open="isVideoRoomOpen"
       :is-author-community="true"
       :author-community-id="currentAuthorId"
+      :view-mode="viewMode"
+      :owner-type="'author'"
+      :owner-id="currentAuthorId"
       @toggle-users="toggleUsersDrawer"
       @toggle-video="toggleVideoRoom"
     />
-
-    <!-- Управление каналами/директориями — то же самое -->
     <ManagementChannel
       v-model="channelDialog"
       :group-id="currentAuthorId"
@@ -68,20 +65,37 @@
       :directory="editingDirectory"
       @submit="onSubmitDirectory"
     />
+    <CreateNewsDialog
+      v-model="newsDialog"
+      owner-type="author"
+      :owner-id="currentAuthorId"
+      @created="
+        () => {
+          viewMode.value = 'news';
+        }
+      "
+    />
+    <CreateEventDialog
+      v-model="eventDialog"
+      owner-type="author"
+      :owner-id="currentAuthorId"
+      @created="
+        () => {
+          viewMode.value = 'events';
+        }
+      "
+    />
   </v-container>
 </template>
-
 <script setup lang="ts">
 import { computed, onMounted, watch, ref, reactive } from "vue";
 import { useDisplay } from "vuetify";
 import { useRoute, useRouter } from "vue-router";
-
 import SmallNavigationTab from "~/components/SmallNavigationTab.vue";
 import MyProfileTabNavigation from "~/components/MiniProfile/MyProfileTabNavigation.vue";
 import ContentArea from "~/components/Groups/ContentArea.vue";
 import ChannelsDrawer from "~/components/Groups/ChannelsDrawer.vue";
 import UsersDrawer from "~/components/Groups/UsersDrawer.vue";
-
 import { useUiStore } from "~/stores/ui";
 import { useCallStore } from "~/stores/call";
 import { useProfilesStore } from "~/stores/user/profiles";
@@ -91,46 +105,39 @@ import ManagementChannel from "~/components/Groups/ManagmentChannel.vue";
 import ManagementDirectories from "~/components/Groups/ManagementDirectories.vue";
 import { useUsersStore } from "~/stores/users";
 import { useRolesStore } from "~/stores/roles";
-
 import { useAppearanceStore } from "~/stores/app/appearance";
 import { useThemeOverrideStore } from "~/stores/app/themeOverride";
-import { useGroupThemesStore } from "~/stores/groupThemes"; // можно сделать аналог для авторов позже
-
+import { useGroupThemesStore } from "~/stores/groupThemes";
 import { useAuthorsStore } from "~/stores/authors";
-
+import CreateNewsDialog from "~/components/news/CreateNewsDialog.vue";
+import CreateEventDialog from "~/components/news/CreateEventDialog.vue";
 const ui = useUiStore();
 const call = useCallStore();
 const profiles = useProfilesStore();
 const route = useRoute();
 const router = useRouter();
-
 const authorsStore = useAuthorsStore();
 const channelsStore = useChannelsStore();
 const directoriesStore = useDirectoriesStore();
 const usersStore = useUsersStore();
 const rolesStore = useRolesStore();
-
 const appearance = useAppearanceStore();
 const themeOverride = useThemeOverrideStore();
-const groupThemes = useGroupThemesStore(); // пока можно использовать те же темы или выключить
-
+const groupThemes = useGroupThemesStore();
 authorsStore.ensureSeed();
 usersStore.ensureSeed();
-
 const { smAndDown } = useDisplay();
 const isSmAndDown = computed(() => smAndDown.value);
-
 const channelsDrawer = ref(true);
 const usersDrawer = ref(true);
-
 const state = reactive({
   activeTextChannelId: "" as string,
   isVideoRoomOpen: false,
 });
-
+const newsDialog = ref(false);
+const eventDialog = ref(false);
 const channelDialog = ref(false);
 const directoryDialog = ref(false);
-
 const editingChannel = ref<
   | {
       id: string;
@@ -140,15 +147,10 @@ const editingChannel = ref<
     }
   | undefined
 >(undefined);
-
 const editingDirectory = ref<{ id: string; name: string } | undefined>(
   undefined
 );
-
-// id текущего автора (сообщества) из роута
 const currentAuthorId = computed(() => String(route.params.id || ""));
-
-// список сообществ авторов для левой навигации
 const communitiesList = computed(() =>
   authorsStore.communities.map((c) => ({
     id: c.id,
@@ -156,14 +158,10 @@ const communitiesList = computed(() =>
     avatar: c.avatar || "",
   }))
 );
-
-// имя выбранного сообщества автора
 const selectedCommunityName = computed(() => {
   const c = authorsStore.getById(currentAuthorId.value);
   return c?.name ?? "";
 });
-
-// каналы/директории автора — точь‑в‑точь как для группы, только id = id автора
 const authorChannels = computed(() => {
   if (!currentAuthorId.value) return [];
   return channelsStore.getByGroup(currentAuthorId.value);
@@ -172,7 +170,6 @@ const authorDirectories = computed(() => {
   if (!currentAuthorId.value) return [];
   return directoriesStore.getByGroup(currentAuthorId.value);
 });
-
 const uncategorizedDirectory = computed(() => ({
   id: "__uncategorized__",
   groupId: currentAuthorId.value,
@@ -181,21 +178,18 @@ const uncategorizedDirectory = computed(() => ({
   isCollapsed: false,
   createdAt: "",
 }));
-
 const directoriesWithChannels = computed(() => {
   if (!currentAuthorId.value) return [];
   const dirs = [...authorDirectories.value];
   const channels = authorChannels.value;
   const channelsWithoutDir = channels.filter((c) => !c.directoryId);
   const hasUncategorized = channelsWithoutDir.length > 0;
-
   const result = dirs.map((dir) => ({
     dir,
     channels: channels
       .filter((c) => c.directoryId === dir.id)
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
   }));
-
   if (hasUncategorized) {
     result.unshift({
       dir: uncategorizedDirectory.value,
@@ -206,12 +200,9 @@ const directoriesWithChannels = computed(() => {
   }
   return result;
 });
-
 const directoryOptions = computed(() =>
   authorDirectories.value.map((d) => ({ id: d.id, name: d.name }))
 );
-
-// диалоги
 function openCreateChannel() {
   editingChannel.value = undefined;
   channelDialog.value = true;
@@ -226,12 +217,9 @@ function openEditDirectory(dirId: string) {
   editingDirectory.value = { id: d.id, name: d.name };
   directoryDialog.value = true;
 }
-
-// bootstrap автора
 async function bootstrapAuthor() {
   const aid = currentAuthorId.value;
   const community = authorsStore.getById(aid);
-
   if (!community) {
     const fallback = authorsStore.communities[0]?.id;
     if (fallback) {
@@ -239,22 +227,15 @@ async function bootstrapAuthor() {
     }
     return;
   }
-
-  // гарантируем базовые роли для "этой группы" (id = id автора)
   rolesStore.ensureBaseRolesForGroup(aid);
-
   ensureActiveAuthorAndSeed();
 }
-
-// создаём дефолтные директории/каналы, если у автора их нет
 function ensureActiveAuthorAndSeed() {
   const aid = currentAuthorId.value;
   if (!aid) return;
-
   const hasAny =
     channelsStore.getByGroup(aid).length > 0 ||
     directoriesStore.getByGroup(aid).length > 0;
-
   if (!hasAny) {
     const catGeneral = directoriesStore.addDirectory({
       groupId: aid,
@@ -299,8 +280,6 @@ function ensureActiveAuthorAndSeed() {
     state.activeTextChannelId = firstText?.id || "";
   }
 }
-
-// каналы
 function openEditChannel(chId: string) {
   const ch = channelsStore.getById(chId);
   if (!ch) return;
@@ -312,7 +291,6 @@ function openEditChannel(chId: string) {
   };
   channelDialog.value = true;
 }
-
 function onSubmitChannel(payload: {
   id?: string;
   name: string;
@@ -320,13 +298,10 @@ function onSubmitChannel(payload: {
   directoryId: string | null;
 }) {
   if (!currentAuthorId.value) return;
-
   const aid = currentAuthorId.value;
-
   if (payload.id) {
     const prev = channelsStore.getById(payload.id);
     if (!prev) return;
-
     if (prev.type === "text" && payload.type === "voice") {
       call
         .createJanusRoom({
@@ -345,7 +320,6 @@ function onSubmitChannel(payload: {
         });
       return;
     }
-
     if (prev.type === "voice" && payload.type === "text") {
       const rid = prev.janusRoomId;
       channelsStore.updateChannel(payload.id, {
@@ -361,7 +335,6 @@ function onSubmitChannel(payload: {
       }
       return;
     }
-
     channelsStore.updateChannel(payload.id, {
       name: payload.name,
       type: payload.type,
@@ -369,9 +342,7 @@ function onSubmitChannel(payload: {
     });
     return;
   }
-
   const nextPos = channelsStore.getByGroup(aid).length + 1;
-
   if (payload.type === "voice") {
     call
       .createJanusRoom({
@@ -402,7 +373,6 @@ function onSubmitChannel(payload: {
     state.activeTextChannelId = ch.id;
   }
 }
-
 function onSubmitDirectory(payload: { id?: string; name: string }) {
   if (!currentAuthorId.value) return;
   const aid = currentAuthorId.value;
@@ -418,23 +388,18 @@ function onSubmitDirectory(payload: { id?: string; name: string }) {
     });
   }
 }
-
 function deleteChannel(id: string) {
   const ch = channelsStore.getById(id);
   if (!ch) return;
-
   if (call.activeVoiceChannelId === id) {
     call.leaveCall().catch(() => {});
   }
-
   if (ch.type === "voice" && typeof ch.janusRoomId === "number") {
     call.destroyJanusRoom(ch.janusRoomId).catch((e) => {
       console.warn("Failed to destroy Janus room", e);
     });
   }
-
   channelsStore.removeChannel(id);
-
   if (state.activeTextChannelId === id) {
     const firstText = channelsStore
       .getByGroup(currentAuthorId.value)
@@ -442,7 +407,6 @@ function deleteChannel(id: string) {
     state.activeTextChannelId = firstText?.id || "";
   }
 }
-
 function deleteDirectory(id: string) {
   const chs = channelsStore
     .getByGroup(currentAuthorId.value)
@@ -450,18 +414,14 @@ function deleteDirectory(id: string) {
   chs.forEach((c) => channelsStore.updateChannel(c.id, { directoryId: null }));
   directoriesStore.removeDirectory(id);
 }
-
 function toggleDirectory(id: string) {
   const d = directoriesStore.getById(id);
   if (!d) return;
   directoriesStore.updateDirectory(id, { isCollapsed: !d.isCollapsed });
 }
-
-// клик по каналу
 function handleChannelClick(ch: Channel) {
   if (ch.type === "voice") {
     if (call.isJoining) return;
-
     if (!call.callEnabled || call.activeVoiceChannelId !== ch.id) {
       call.joinVoiceChannel(ch.id, profiles.name || "User");
     } else if (call.activeVoiceChannelId === ch.id) {
@@ -476,30 +436,18 @@ function handleChannelClick(ch: Channel) {
     selectTextChannel(ch.id);
   }
 }
-
-function selectTextChannel(id: string) {
-  state.activeTextChannelId = id;
-}
-
 const activeTextChannelName = computed(() => {
   const ch = authorChannels.value.find(
     (c) => c.id === state.activeTextChannelId
   );
   return ch?.name ?? "";
 });
-
-// темы можно пока просто сбрасывать / не использовать
 function applyAuthorThemeIfNeeded() {
-  // по аналогии с группами, если решишь хранить тему для автора
   themeOverride.set(null);
 }
-
-// навигация между авторами
 function navigateToAuthor(authorId: string) {
   router.push(`/authors/${authorId}`);
 }
-
-// заглушки/экшены
 function openAuthorSettings() {
   router.push(`/authors/${currentAuthorId.value}-settings`);
 }
@@ -507,10 +455,10 @@ function invitePeople() {
   console.log("invite people to author community");
 }
 function createEvent() {
-  console.log("create event in author community");
+  eventDialog.value = true;
 }
 function publishNews() {
-  console.log("publish news in author community");
+  newsDialog.value = true;
 }
 function openNotificationSettings() {
   console.log("open notifications for author community");
@@ -518,8 +466,22 @@ function openNotificationSettings() {
 function openPrivacySettings() {
   console.log("open privacy for author community");
 }
+const viewMode = ref<"channel" | "news" | "events">("channel");
 
-// toggles
+function openNewsFeed() {
+  viewMode.value = "news";
+  router.replace({ query: { ...route.query, tab: "news" } });
+}
+function openEventsFeed() {
+  viewMode.value = "events";
+  router.replace({ query: { ...route.query, tab: "events" } });
+}
+function selectTextChannel(id: string) {
+  state.activeTextChannelId = id;
+  viewMode.value = "channel";
+  const { tab, ...rest } = route.query;
+  router.replace({ query: { ...rest } });
+}
 const toggleChannelsDrawer = () =>
   (channelsDrawer.value = !channelsDrawer.value);
 const toggleUsersDrawer = () => (usersDrawer.value = !usersDrawer.value);
@@ -528,12 +490,10 @@ const isVideoRoomOpen = computed({
   get: () => state.isVideoRoomOpen,
   set: (v) => (state.isVideoRoomOpen = v),
 });
-
 onMounted(() => {
   bootstrapAuthor();
   applyAuthorThemeIfNeeded();
 });
-
 watch(
   () => route.params.id,
   () => {
@@ -541,13 +501,20 @@ watch(
     applyAuthorThemeIfNeeded();
   }
 );
-
 watch(
   () => appearance.preferPersonalThemeInGroups,
   () => applyAuthorThemeIfNeeded()
 );
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab === "news") viewMode.value = "news";
+    else if (tab === "events") viewMode.value = "events";
+    else viewMode.value = "channel";
+  },
+  { immediate: true }
+);
 </script>
-
 <style scoped>
 .h-100 {
   height: 100%;

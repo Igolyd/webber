@@ -1,6 +1,6 @@
 <!-- components/GroupsSettings/PeopleRoles.vue -->
 <template>
-  <div class="pa-4">
+  <div class="pa-4 scroll-y">
     <h2 class="text-h6 mb-2">Роли</h2>
     <p class="text-medium-emphasis mb-4">Управляйте ролями и правами в вашей группе.</p>
 
@@ -161,5 +161,17 @@ function editRole(id?: string | null) {
 <style scoped>
 .role-item {
   cursor: pointer;
+}
+.scroll-y {
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-y::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.scroll-y {
+  scrollbar-width: none;
 }
 </style>

@@ -437,9 +437,17 @@ watch(model, (v) => {
   --v-theme-surface-variant: var(--rnav-elev-1);
 }
 .theme-drawer-right {
-  background: var(
-    --rnav-elev-1,
-    var(--app-surface, var(--v-theme-surface))
+  background: linear-gradient(
+    to top,
+    /* низ — почти белый, но с тоном темы */
+      color-mix(
+        in srgb,
+        var(--lnav-background) 70%,
+        var(--gradient-bg-color) 30%
+      )
+      0%,
+    /* дальше — нормальный цвет темы */ var(--rnav-elev-1) 60%,
+    var(--rnav-elev-1) 100%
   ) !important;
   color: var(
     --rnav-on-surface,

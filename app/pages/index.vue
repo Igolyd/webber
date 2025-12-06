@@ -11,7 +11,7 @@
 
     <div class="content-area">
       <section class="content-scroll">
-        <v-card flat class="list-card">
+        <v-card flat class="list-card scope-main">
           <template v-if="activeCategoryId === 1">
             <GroupList :groups="groupsStore.groups" @opened="onOpenFromList" />
           </template>
@@ -33,6 +33,7 @@
       :permanent="!isSmAndDown"
       :temporary="isSmAndDown"
       :width="320"
+      :active-category-id="activeCategoryId"
     />
 
     <ContentHeader
@@ -160,14 +161,6 @@ export default defineComponent({
   flex-direction: column;
   height: 100%;
   box-shadow: none !important;
-
-  --v-theme-surface: var(--main-background);
-  --v-theme-on-surface: var(--main-on-surface);
-  --v-theme-outline: var(--main-border);
-  --v-theme-surface-variant: var(--main-elev-1);
-
-  background: transparent !important;
-  color: var(--main-on-surface);
 }
 
 .content-scroll {
@@ -177,8 +170,7 @@ export default defineComponent({
 }
 
 .list-card {
-  background: transparent !important;
-  color: var(--main-on-surface);
+  /* фон и цвета берутся из .scope-main (см. sections.css) */
   border: 1px solid var(--main-border);
   border-left: none;
   height: 100%;
