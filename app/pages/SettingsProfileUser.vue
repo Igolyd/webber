@@ -1,9 +1,7 @@
-<!-- pages/SettingsProfileUser.vue -->
 <template>
   <div class="settings-profile-user d-flex">
     <SettingsPanel class="mr-4" @navigate="onNavigate" />
     <div class="settings-main">
-      <!-- Область под контент секции -->
       <div class="settings-main-content">
         <ClientOnly>
           <component :is="currentComponent" :key="currentKey" />
@@ -12,8 +10,6 @@
           </template>
         </ClientOnly>
       </div>
-
-      <!-- Общая панель действий -->
       <ActionsBar
         v-model="dirty"
         :saving="saving"
@@ -23,7 +19,6 @@
     </div>
   </div>
 </template>
-
 <script lang="ts">
 import {
   defineComponent,
@@ -35,9 +30,7 @@ import {
 } from "vue";
 import SettingsPanel from "~/components/Settings/SettingsPanel.vue";
 import ActionsBar from "~/components/Settings/ActionsBar.vue";
-
 type GroupKey = "app" | "user";
-
 type SectionKey =
   | "notifications"
   | "language"
@@ -58,15 +51,14 @@ type SectionKey =
   | "profiles"
   | "privacyAC"
   | "overlay"
-  | "SetAC";
-
+  | "SetAC"
+  | "soundboard";
 export default defineComponent({
   name: "SettingsProfileUser",
   components: { SettingsPanel, ActionsBar },
   setup() {
     const group = ref<GroupKey>("app");
     const section = ref<SectionKey>("notifications");
-
     const Loading = {
       name: "SettingsAsyncLoading",
       render() {
@@ -83,7 +75,6 @@ export default defineComponent({
         );
       },
     };
-
     function makeAsync(loader: () => Promise<any>) {
       return defineAsyncComponent({
         loader,
@@ -98,7 +89,6 @@ export default defineComponent({
         },
       });
     }
-
     const map: Record<string, any> = {
       "app:notifications": makeAsync(
         () => import("~/components/Settings/App/AppNotifications.vue")
@@ -122,7 +112,6 @@ export default defineComponent({
         () => import("~/components/Settings/App/AppStreamer.vue")
       ),
       "app:av": makeAsync(() => import("~/components/Settings/App/AppAV.vue")),
-
       "user:account": makeAsync(
         () => import("~/components/Settings/User/UserAccount.vue")
       ),
@@ -150,7 +139,9 @@ export default defineComponent({
       "user:stickers": makeAsync(
         () => import("~/components/Settings/User/ReactionsStickers.vue")
       ),
-
+      "user:soundboard": makeAsync(
+        () => import("~/components/Settings/User/UserSoundboard.vue")
+      ),
       "activity:privacyAC": makeAsync(
         () => import("~/components/Settings/Activity/ActivityPrivacy.vue")
       ),
@@ -161,7 +152,6 @@ export default defineComponent({
         () => import("~/components/Settings/Activity/ActivityApps.vue")
       ),
     };
-
     const currentKey = computed(() => `${group.value}:${section.value}`);
     const currentComponent = computed(
       () =>
@@ -169,23 +159,18 @@ export default defineComponent({
           render: () => h("div", "Секция не найдена"),
         }
     );
-
     function onNavigate(payload: { group: GroupKey; section: SectionKey }) {
       group.value = payload.group;
       section.value = payload.section;
     }
-
     if (!map[currentKey.value]) {
       group.value = "app";
       section.value = "notifications";
     }
-
-    // Управление "сохранить/сбросить" и "грязностью"
     const saving = ref(false);
     const dirty = ref(false);
     const onSaveHandler = ref<null | (() => Promise<void> | void)>(null);
     const onResetHandler = ref<null | (() => void)>(null);
-
     function onSaveClick() {
       if (onSaveHandler.value) {
         const r = onSaveHandler.value();
@@ -206,8 +191,6 @@ export default defineComponent({
       onResetHandler.value?.();
       dirty.value = false;
     }
-
-    // Предоставляем секциям API
     provide("settingsActions", {
       saving,
       setHandlers(h: {
@@ -221,7 +204,6 @@ export default defineComponent({
         onSaveHandler.value = null;
         onResetHandler.value = null;
       },
-      // Новые методы
       markDirty() {
         dirty.value = true;
       },
@@ -229,7 +211,6 @@ export default defineComponent({
         dirty.value = false;
       },
     });
-
     return {
       onNavigate,
       currentComponent,
@@ -242,15 +223,12 @@ export default defineComponent({
   },
 });
 </script>
-
 <style scoped>
 .settings-profile-user {
   gap: 16px;
-  height: 100vh; /* высота всего layout = высота окна */
-  overflow: hidden; /* не даём странице прокручиваться сама */
+  height: 100vh;
+  overflow: hidden;
 }
-
-/* Правый столбец: контент сверху, ActionsBar снизу */
 .settings-main {
   display: flex;
   flex-direction: column;
@@ -258,11 +236,9 @@ export default defineComponent({
   min-width: 0;
   min-height: 0;
 }
-
-/* Область под контент секции — растягивается от верха до ActionsBar */
 .settings-main-content {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden; /* скролл будет уже в дочернем контейнере секции */
+  overflow: hidden;
 }
 </style>

@@ -166,6 +166,71 @@
                   </v-list>
                 </v-menu>
               </div>
+              <!-- Звуковая панель — показываем только в звонке -->
+              <div v-if="call.callEnabled" class="activator-wrap">
+                <v-menu
+                  v-model="openSoundMenu"
+                  activator="parent"
+                  location="bottom"
+                  content-class="menu-scope"
+                >
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      icon
+                      :density="btnDensity"
+                      variant="text"
+                      :title="'Открыть звуковую панель'"
+                    >
+                      <v-icon>mdi-music-note</v-icon>
+                    </v-btn>
+                  </template>
+
+                  <v-card class="pa-2" min-width="260">
+                    <div class="d-flex align-center mb-2">
+                      <v-icon class="mr-1">mdi-music</v-icon>
+                      <span class="text-subtitle-2">Звуковая панель</span>
+                      <v-spacer />
+                      <NuxtLink
+                        to="/SettingsProfileUser"
+                        class="text-decoration-none"
+                      >
+                        <v-btn
+                          size="x-small"
+                          variant="text"
+                          icon
+                          :title="'Настройки звуковой панели'"
+                        >
+                          <v-icon size="18">mdi-cog-outline</v-icon>
+                        </v-btn>
+                      </NuxtLink>
+                    </div>
+
+                    <v-list
+                      v-if="soundClips.length"
+                      density="compact"
+                      color="transparent"
+                    >
+                      <v-list-item
+                        v-for="clip in soundClips"
+                        :key="clip.id"
+                        @click="onPlaySound(clip)"
+                      >
+                        <v-list-item-title class="text-truncate">
+                          {{ clip.name }}
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                          ~{{ clip.durationSec.toFixed(1) }} с
+                        </v-list-item-subtitle>
+                      </v-list-item>
+                    </v-list>
+
+                    <div v-else class="text-caption text-medium-emphasis">
+                      Нет звуков. Добавьте их в настройках.
+                    </div>
+                  </v-card>
+                </v-menu>
+              </div>
 
               <!-- Настройки -->
               <NuxtLink to="/SettingsProfileUser">
@@ -221,7 +286,7 @@
                 </div>
 
                 <!-- Остальной набор кнопок (камера, трансляция) имеет смысл только,
-                     когда уже подключены -->
+когда уже подключены -->
                 <template v-if="call.callEnabled && !call.isJoining">
                   <!-- Камера -->
                   <div class="activator-wrap">
@@ -337,6 +402,7 @@ import FullProfileTabNavigation from "./FullProfileTabNavigation.vue";
 import WinProfile from "./WinProfile.vue";
 import dfAvatal from "../../assets/profile/profile_exp.jpg";
 import { useAVStore } from "~/stores/app/av";
+import { useSoundboardStore } from "~/stores/soundboard";
 
 export default defineComponent({
   name: "MyProfileTabNavigation",
@@ -346,6 +412,8 @@ export default defineComponent({
     const profiles = useProfilesStore();
     const call = useCallStore();
     const av = useAVStore();
+    const soundboard = useSoundboardStore();
+
     const defaultAvatar = dfAvatal;
 
     const state = reactive({
@@ -355,11 +423,13 @@ export default defineComponent({
       openSpkMenu: false,
       openCamMenu: false,
       openShareMenu: false,
+      openSoundMenu: false,
       inputDevices: [] as MediaDeviceInfo[],
       outputDevices: [] as MediaDeviceInfo[],
       videoDevices: [] as MediaDeviceInfo[],
     });
 
+    const soundClips = computed(() => soundboard.myClips);
     const display = useDisplay();
     const avatarSize = computed(() => (display.xs.value ? 40 : 48));
     const btnDensity = computed(() =>
@@ -405,7 +475,12 @@ export default defineComponent({
       av.outputDeviceId = id;
       av.saveDevices({ outputId: id });
     };
-
+    const onPlaySound = (clip: any) => {
+      // пока вызываем метод из callStore (ниже добавим)
+      call.playSoundboardClip(clip);
+      // можно закрыть меню:
+      state.openSoundMenu = false;
+    };
     function isGradientLike(val?: string) {
       if (!val) return false;
       const v = val.toLowerCase().trim();
@@ -458,6 +533,9 @@ export default defineComponent({
       setMic,
       setCam,
       setOutput,
+      profileBadgeStyle,
+      soundClips,
+      onPlaySound,
       profileBadgeStyle,
     };
   },

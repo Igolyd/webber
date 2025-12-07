@@ -1,4 +1,3 @@
-<!-- components/Settings/SettingsPanel.vue -->
 <template>
   <v-navigation-drawer
     app
@@ -20,9 +19,11 @@
       <v-list-item @click="select('user', 'alerts')"
         >Настройки алертсов</v-list-item
       >
+      <v-list-item @click="select('user', 'soundboard')">
+        Звуковая панель
+      </v-list-item>
       <v-list-item @click="select('user', 'emoji')">Эмодзи</v-list-item>
       <v-list-item @click="select('user', 'stickers')">Стикеры</v-list-item>
-
       <v-list-subheader>Настройки приложения</v-list-subheader>
       <v-list-item @click="select('app', 'notifications')"
         >Уведомления</v-list-item
@@ -42,7 +43,6 @@
         >Инструменты стримера</v-list-item
       >
       <v-list-item @click="select('app', 'av')">Аудио/Видео</v-list-item>
-
       <v-list-subheader>Настройки активности</v-list-subheader>
       <v-list-item @click="select('activity', 'SetAC')"
         >Настройки активности</v-list-item
@@ -52,8 +52,6 @@
         >Приватность</v-list-item
       >
     </v-list>
-
-    <!-- Разделитель и кнопка Выйти -->
     <template #append>
       <v-divider />
       <v-list density="compact" color="transparent">
@@ -67,7 +65,6 @@
     </template>
   </v-navigation-drawer>
 </template>
-
 <script lang="ts">
 type GroupKey = "app" | "user" | "activity";
 type SectionKey =
@@ -90,10 +87,10 @@ type SectionKey =
   | "alerts"
   | "emoji"
   | "stickers"
-  | "overlay";
-
+  | "overlay"
+  | "soundboard";
 export default {
-  emits: ["navigate", "logout"], // добавили logout
+  emits: ["navigate", "logout"],
   methods: {
     select(group: GroupKey, section: SectionKey) {
       this.$emit("navigate", { group, section });
@@ -101,17 +98,13 @@ export default {
   },
 };
 </script>
-
 <style scoped>
-/* Токены секции (как в AppLeftDrawer) */
 .settings-panel.scope-lnav {
   --v-theme-surface: var(--lnav-background);
   --v-theme-on-surface: var(--lnav-on-surface);
   --v-theme-outline: var(--lnav-border);
   --v-theme-surface-variant: var(--lnav-elev-1);
 }
-
-/* Коробка Drawer — без прямого фона, рисуем слой ::before */
 .settings-panel.theme-drawer-left {
   position: relative;
   width: 280px;
@@ -123,8 +116,6 @@ export default {
   box-shadow: none !important;
   backdrop-filter: blur(6px);
 }
-
-/* Подложка секции — смешивается через ThemeBridge и токен --lnav-background */
 .settings-panel.theme-drawer-left::before {
   content: "";
   position: absolute;
@@ -133,8 +124,6 @@ export default {
   pointer-events: none;
   z-index: 0;
 }
-
-/* Контент выше подложки и прозрачный */
 .settings-panel :deep(.v-navigation-drawer__content),
 .settings-panel :deep(.v-list),
 .settings-panel :deep(.v-divider) {
@@ -143,34 +132,29 @@ export default {
   background: transparent !important;
   color: var(--lnav-on-surface);
 }
-
-/* Ховер — секционный, с fallback (не глобальный --app-hover-color) */
 .settings-panel :deep(.v-list-item:hover) {
   background: var(
     --lnav-hover,
     color-mix(in oklab, var(--lnav-on-surface) 10%, transparent)
   ) !important;
 }
-/* отключаем дефолтный цвет overlay, чтобы не мешал */
 .settings-panel :deep(.v-list-item__overlay) {
   background: transparent !important;
 }
-
-/* рисуем hover через overlay — так делает сам Vuetify */
 .settings-panel :deep(.v-list-item:hover .v-list-item__overlay) {
   background: var(
     --lnav-hover,
-    var(--app-hover-color, color-mix(in oklab, var(--lnav-on-surface) 10%, transparent))
+    var(
+      --app-hover-color,
+      color-mix(in oklab, var(--lnav-on-surface) 10%, transparent)
+    )
   ) !important;
-  opacity: 1 !important; /* убедимся, что слой видим */
+  opacity: 1 !important;
 }
-
-/* для активных пунктов (опционально) */
 .settings-panel :deep(.v-list-item--active .v-list-item__overlay) {
   background: var(--app-selected-color) !important;
   opacity: 1 !important;
 }
-/* Подзаголовок — секционный токен */
 .settings-panel :deep(.v-list-subheader) {
   color: var(--app-on-surface-variant);
 }

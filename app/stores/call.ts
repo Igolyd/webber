@@ -1,11 +1,9 @@
-// stores/call.ts
 import { defineStore } from "pinia";
 import { ref, reactive, computed, watch } from "vue";
 import { useAVStore } from "./app/av";
 import { useSettingsStore } from "./settings";
 import { useProfilesStore } from "./user/profiles";
 import { useChannelsStore } from "./channels";
-
 type Participant = {
   id: string;
   display: string;
@@ -17,12 +15,8 @@ type Participant = {
   speakingLevel: number;
   avatarUrl?: string;
 };
-
 const JANUS_SERVER = "wss://janus.shinegold.ru";
-
-// Статический ID комнаты для всех голосовых каналов (для отладки/тестов)
 const STATIC_ROOM_ID = 1234;
-// Meta → display
 function encodeDisplay(name: string, avatarUrl?: string) {
   try {
     return JSON.stringify({ n: name, a: avatarUrl || "" });
@@ -43,28 +37,19 @@ export const useCallStore = defineStore("call", () => {
   const callEnabled = ref(false);
   const activeVoiceChannelId = ref<string | null>(null);
   const focusParticipantId = ref<string | null>(null);
-
   const isJoining = ref(false);
   const joinAttemptId = ref(0);
   const channelsStore = useChannelsStore();
-
-  // Janus objects
   const janusClient = ref<any | null>(null);
   const janusSession = ref<any | null>(null);
   const janusRoom = ref<any | null>(null);
   const janusPlugin = ref<any | null>(null);
   const publisher = ref<any | null>(null);
-
-  // Local media
   const localStream = ref<MediaStream | null>(
     import.meta.client ? new MediaStream() : null
   );
   const localVideoKind = ref<"none" | "camera" | "screenshare">("none");
-
-  // Текущий трек шеринга, чтобы корректно стопать его
   const currentScreenTrack = ref<MediaStreamTrack | null>(null);
-
-  // Devices
   const selectedMicId = ref<string | null>(
     import.meta.client ? localStorage.getItem("microphoneDevice") : null
   );
@@ -74,15 +59,11 @@ export const useCallStore = defineStore("call", () => {
   const selectedOutputId = ref<string | null>(
     import.meta.client ? localStorage.getItem("audioOutputDevice") : null
   );
-
-  // Screenshare constraints preset
   const shareConstraints = ref<{
     width?: number;
     height?: number;
     frameRate?: number;
   } | null>(null);
-
-  // Participants and subscriptions
   const participants = reactive<Map<string, Participant>>(new Map());
   const subscriptions = new Map<string, any>();
   const subMidsMap = new Map<string, Set<any>>();
@@ -91,7 +72,6 @@ export const useCallStore = defineStore("call", () => {
     { ensureTimer?: number; retryTimer?: number; retries: number }
   >();
   const videoHideTimers = new Map<string, number>();
-
   function clearSubTimers(pid: string) {
     const st = subState.get(pid);
     if (!st) return;
@@ -100,21 +80,13 @@ export const useCallStore = defineStore("call", () => {
     subState.set(pid, { retries: st.retries || 0 });
   }
   function cancelJoin() {
-    // Инвалидируем любую текущую попытку join
     joinAttemptId.value++;
-
-    // Сразу прячем спиннер в UI
     isJoining.value = false;
-
-    // Если мы уже в звонке – просто выходим
     if (callEnabled.value) {
       leaveCall().catch(() => {});
       return;
     }
-
-    // Если еще не успели войти — на всякий случай чистим базовое состояние
     activeVoiceChannelId.value = null;
-    // можно не трогать callEnabled, он и так false до успешного join
   }
   function clearAllSubTimers() {
     for (const pid of subState.keys()) clearSubTimers(pid);
@@ -126,8 +98,6 @@ export const useCallStore = defineStore("call", () => {
     const p = participants.get(pid);
     return !!p && p.stream.getVideoTracks().length > 0;
   }
-
-  // Audio analysers
   const analyserMap = new Map<
     string,
     {
@@ -141,19 +111,17 @@ export const useCallStore = defineStore("call", () => {
     analyser: AnalyserNode;
     src: MediaStreamAudioSourceNode;
   } | null = null;
-  let speakingRaf = 0;
 
+  let speakingRaf = 0;
   const settings = useSettingsStore();
   const av = useAVStore();
   const profiles = useProfilesStore();
-
   const participantList = computed(() => Array.from(participants.values()));
   const focusedParticipant = computed(() =>
     focusParticipantId.value
       ? participants.get(focusParticipantId.value) || null
       : null
   );
-
   function persistDevices() {
     if (!import.meta.client) return;
     if (selectedMicId.value)
@@ -163,7 +131,6 @@ export const useCallStore = defineStore("call", () => {
     if (selectedOutputId.value)
       localStorage.setItem("audioOutputDevice", selectedOutputId.value);
   }
-  // Проверяем, есть ли уже опубликованный sender указанного типа (видео/аудио)
   function hasPublishedSender(kind: "audio" | "video"): boolean {
     try {
       const list = publisher.value?.pluginHandle?.getLocalTracks?.();
@@ -171,17 +138,14 @@ export const useCallStore = defineStore("call", () => {
         return !!list.find((t: any) => t?.type === kind);
       }
     } catch {}
-    // fallback: по локальному превью (оно проксирует onlocaltrack от плагина)
     try {
       return !!localStream.value?.getTracks().some((t) => t.kind === kind);
     } catch {}
     return false;
   }
-  // Инициализация клиента/сессии
   let clientReady: Promise<any> | null = null;
   async function ensureJanus() {
     if (!import.meta.client) return;
-
     if (!janusClient.value) {
       if (!clientReady) {
         const mod = await import("janus-simple-videoroom-client");
@@ -209,7 +173,6 @@ export const useCallStore = defineStore("call", () => {
       janusSession.value = await janusClient.value.createSession(JANUS_SERVER);
     }
   }
-
   async function ensureVideoRoomPlugin() {
     await ensureJanus();
     if (janusPlugin.value) return janusPlugin.value;
@@ -218,7 +181,51 @@ export const useCallStore = defineStore("call", () => {
     );
     return janusPlugin.value;
   }
+  let soundboardCtx: AudioContext | null = null;
+  // --- Микшер для микрофона + звуковой панели ---
+  let mixerCtx: AudioContext | null = null;
+  let mixerDestination: MediaStreamAudioDestinationNode | null = null;
+  let micStream: MediaStream | null = null;
+  let micTrack: MediaStreamTrack | null = null;
+  let mixedAudioTrack: MediaStreamTrack | null = null;
+  // Простой проигрыватель dataUrl — локально в динамики
+  async function playSoundboardClip(clip: { dataUrl: string }) {
+    if (!import.meta.client) return;
+    try {
+      // Если есть микшер — играем через него
+      if (mixerCtx && mixerDestination) {
+        const ctx = mixerCtx;
 
+        const res = await fetch(clip.dataUrl);
+        const buf = await res.arrayBuffer();
+        const audioBuf = await ctx.decodeAudioData(buf.slice(0));
+
+        const src = ctx.createBufferSource();
+        src.buffer = audioBuf;
+
+        // Гейн на всякий случай (можно регулировать громкость soundboard)
+        const gain = ctx.createGain();
+        gain.gain.value = 1.0;
+
+        src.connect(gain);
+        // в общий микс (Janus)
+        gain.connect(mixerDestination);
+        // и в локальные динамики
+        gain.connect(ctx.destination);
+
+        src.start();
+        return;
+      }
+
+      // Фолбэк: микшер ещё не инициализирован (например, микрофон выключен) —
+      // просто играем звук локально, как раньше.
+      const audio = new Audio(clip.dataUrl);
+      audio.volume = 1;
+      audio.play().catch(() => {});
+    } catch (e) {
+      console.warn("playSoundboardClip error", e);
+    }
+  }
   async function createJanusRoom(params?: {
     description?: string;
     pin?: string;
@@ -233,14 +240,12 @@ export const useCallStore = defineStore("call", () => {
     };
     if (params?.description) req.description = params.description;
     if (params?.pin) req.pin = params.pin;
-
     const res = await plugin.sendRequest(req);
     if (res?.videoroom === "created" && typeof res?.room === "number") {
       return res.room as number;
     }
     throw new Error("Janus room create failed: " + JSON.stringify(res));
   }
-
   async function destroyJanusRoom(
     roomId: number,
     permanent = false
@@ -254,14 +259,12 @@ export const useCallStore = defineStore("call", () => {
     const res = await plugin.sendRequest(req);
     if (res?.videoroom === "destroyed") return;
   }
-
   function attachRoomMessageListener(room: any) {
     room.pluginHandle?.eventTarget?.addEventListener(
       "message",
       (ev: CustomEvent) => {
         const msg = ev.detail?.message;
         if (!msg || msg.videoroom !== "event") return;
-
         if (Array.isArray(msg.streams)) {
           const grouped = new Map<number, any[]>();
           for (const s of msg.streams) {
@@ -269,12 +272,10 @@ export const useCallStore = defineStore("call", () => {
             if (!grouped.has(feed)) grouped.set(feed, []);
             grouped.get(feed)!.push(s);
           }
-
           grouped.forEach(async (items, feed) => {
             const pid = String(feed);
             const sub = subscriptions.get(pid);
             if (!sub) return;
-
             const known = subMidsMap.get(pid) || new Set<any>();
             const toAdd = items
               .filter(
@@ -284,7 +285,6 @@ export const useCallStore = defineStore("call", () => {
                   !known.has(s.mid)
               )
               .map((s) => ({ feed, mid: s.mid }));
-
             if (toAdd.length) {
               try {
                 await sub.addStreams(toAdd);
@@ -292,7 +292,6 @@ export const useCallStore = defineStore("call", () => {
                 console.warn("message.streams addStreams error", e);
               }
             }
-
             const toRemove: any[] = [];
             items.forEach((s) => {
               const mid = s.mid;
@@ -310,7 +309,6 @@ export const useCallStore = defineStore("call", () => {
             } catch (e) {
               console.warn("message.streams removeStreams error", e);
             }
-
             const p = participants.get(pid);
             if (p) {
               const pubShim = { id: feed, streams: items };
@@ -321,7 +319,6 @@ export const useCallStore = defineStore("call", () => {
       }
     );
   }
-
   function clearAnalysers() {
     if (localAnalyser) {
       localAnalyser.ctx.close().catch(() => {});
@@ -331,8 +328,17 @@ export const useCallStore = defineStore("call", () => {
     analyserMap.clear();
     if (import.meta.client) cancelAnimationFrame(speakingRaf);
     speakingRaf = 0;
-  }
 
+    // --- очищаем микшер ---
+    if (mixerCtx) {
+      mixerCtx.close().catch(() => {});
+      mixerCtx = null;
+      mixerDestination = null;
+      micStream = null;
+      micTrack = null;
+      mixedAudioTrack = null;
+    }
+  }
   function startSpeakingLoop() {
     if (!import.meta.client) return;
     cancelAnimationFrame(speakingRaf);
@@ -356,7 +362,6 @@ export const useCallStore = defineStore("call", () => {
     };
     speakingRaf = requestAnimationFrame(loop);
   }
-
   function attachAnalyserForStream(
     publisherId: string,
     stream: MediaStream,
@@ -377,7 +382,66 @@ export const useCallStore = defineStore("call", () => {
     }
     if (!speakingRaf) startSpeakingLoop();
   }
+  async function ensureMicStream() {
+    if (!import.meta.client) return null;
+    // если уже есть живой трек — возвращаем его
+    if (micStream && micTrack && micTrack.readyState === "live") {
+      return micStream;
+    }
 
+    // Запрашиваем микрофон
+    const constraints: MediaStreamConstraints = {
+      audio: selectedMicId.value
+        ? { deviceId: { exact: selectedMicId.value } }
+        : true,
+      video: false,
+    };
+
+    micStream = await navigator.mediaDevices.getUserMedia(constraints);
+    micTrack = micStream.getAudioTracks()[0] || null;
+    return micStream;
+  }
+
+  async function ensureMixedAudioTrack(): Promise<MediaStreamTrack | null> {
+    if (!import.meta.client) return null;
+    if (!settings.microphoneEnabled) {
+      // Микшер сейчас включаем только когда микрофон включен.
+      // (Если нужно — можно позже сделать отдельный режим "только soundboard")
+      return null;
+    }
+
+    // Создаём / переиспользуем AudioContext + destination
+    if (!mixerCtx || mixerCtx.state === "closed") {
+      mixerCtx = new AudioContext();
+      mixerDestination = mixerCtx.createMediaStreamDestination();
+    }
+    if (!mixerDestination) {
+      mixerDestination = mixerCtx.createMediaStreamDestination();
+    }
+
+    // Обновляем микрофонный источник
+    const stream = await ensureMicStream();
+    if (!stream) return null;
+
+    if (!micTrack || micTrack.readyState !== "live") {
+      micTrack = stream.getAudioTracks()[0] || null;
+    }
+    if (!micTrack) return null;
+
+    // Создаём источник микрофона и подключаем к destination
+    const micSource = mixerCtx.createMediaStreamSource(
+      new MediaStream([micTrack])
+    );
+    micSource.connect(mixerDestination);
+
+    // При желании можно подключить и к mixerCtx.destination для локального мониторинга:
+    // micSource.connect(mixerCtx.destination);
+
+    // Получаем единый аудиотрек из destination.stream
+    mixedAudioTrack = mixerDestination.stream.getAudioTracks()[0] || null;
+
+    return mixedAudioTrack;
+  }
   async function joinVoiceChannel(channelId: string, displayName?: string) {
     console.log(
       "[joinVoiceChannel] call, isJoining =",
@@ -385,35 +449,25 @@ export const useCallStore = defineStore("call", () => {
       "channelId =",
       channelId
     );
-
     if (!import.meta.client) return;
-
-    // Если уже идет join – можно либо игнорировать, либо отменять старый.
-    // Я предлагаю ИГНОРИРОВАТЬ клик, пока isJoining = true:
     if (isJoining.value) {
       console.log("[joinVoiceChannel] skipped: join already in progress");
       return;
     }
-
-    // Регистрируем новую попытку
     const myAttemptId = ++joinAttemptId.value;
     isJoining.value = true;
-
     try {
-      // Если уже в этом же канале – просто показывать окно, join не нужен
       if (callEnabled.value && activeVoiceChannelId.value === channelId) {
         console.log(
           "[joinVoiceChannel] already in this channel, skipping join"
         );
         return;
       }
-
       await ensureJanus();
       if (myAttemptId !== joinAttemptId.value) {
         console.log("[joinVoiceChannel] aborted after ensureJanus");
         return;
       }
-
       const ch = channelsStore.getById(channelId);
       if (!ch) {
         console.warn("[joinVoiceChannel] channel not found", channelId);
@@ -423,14 +477,11 @@ export const useCallStore = defineStore("call", () => {
         console.warn("joinVoiceChannel: not a voice channel");
         return;
       }
-
       let roomId = ch.janusRoomId ?? null;
       if (!roomId) {
         roomId = STATIC_ROOM_ID;
         channelsStore.updateChannel(ch.id, { janusRoomId: roomId });
       }
-
-      // Если уже были в звонке – выйдем
       if (callEnabled.value) {
         console.log("[joinVoiceChannel] leaving previous call");
         await leaveCall(false);
@@ -439,20 +490,14 @@ export const useCallStore = defineStore("call", () => {
           return;
         }
       }
-
-      // Чистим состояние локальных потоков и подписок
       clearAnalysers();
       clearAllSubTimers();
-
       localStream.value?.getTracks().forEach((t) => t.stop());
       localStream.value = new MediaStream();
-
       localVideoKind.value = settings.videoEnabled ? "camera" : "none";
-
       const profileName =
         displayName?.trim() || profiles.name?.trim() || "Без имени";
       const profileAvatar = profiles.avatar || "";
-
       participants.set("local", {
         id: "local",
         display: profileName,
@@ -464,15 +509,12 @@ export const useCallStore = defineStore("call", () => {
         speakingLevel: 0,
         avatarUrl: profileAvatar || undefined,
       });
-
       if (myAttemptId !== joinAttemptId.value) {
         console.log("[joinVoiceChannel] aborted before joinRoom");
         return;
       }
-
       console.log("[joinVoiceChannel] joining Janus room", roomId);
       janusRoom.value = await janusSession.value.joinRoom(roomId);
-
       if (myAttemptId !== joinAttemptId.value) {
         console.log(
           "[joinVoiceChannel] aborted right after joinRoom → leaving room"
@@ -483,7 +525,6 @@ export const useCallStore = defineStore("call", () => {
         janusRoom.value = null;
         return;
       }
-
       attachRoomMessageListener(janusRoom.value);
       setupVisibilityAwakening();
       janusRoom.value.onPublisherAdded((pubs: any[]) =>
@@ -495,7 +536,6 @@ export const useCallStore = defineStore("call", () => {
           pubs.forEach(subscribe)
         );
       }
-
       await publishWithCurrentSettings();
       if (myAttemptId !== joinAttemptId.value) {
         console.log("[joinVoiceChannel] aborted after publish → leaving room");
@@ -504,17 +544,13 @@ export const useCallStore = defineStore("call", () => {
         } catch {}
         return;
       }
-
-      // Только если попытка всё ещё актуальна – считаем, что звонок установлен
       callEnabled.value = true;
       activeVoiceChannelId.value = channelId;
       settings.toggleCall(true);
-
       console.log("[joinVoiceChannel] finished successfully");
     } catch (e) {
       console.error("[joinVoiceChannel] error", e);
     } finally {
-      // Сбрасываем isJoining только если это все еще актуальная попытка
       if (myAttemptId === joinAttemptId.value) {
         isJoining.value = false;
         console.log(
@@ -537,7 +573,6 @@ export const useCallStore = defineStore("call", () => {
   async function ensureMissingMids(pid: string, pub: any) {
     const sub = subscriptions.get(pid);
     if (!sub) return;
-
     const known = subMidsMap.get(pid) || new Set<any>();
     const streamList: any[] = Array.isArray(pub.streams) ? pub.streams : [];
     const videoMids = streamList
@@ -545,11 +580,9 @@ export const useCallStore = defineStore("call", () => {
         (s) => s.mid != null && (s.type === "video" || s.mtype === "video")
       )
       .map((s) => s.mid);
-
     const toAdd = videoMids
       .filter((mid) => !known.has(mid))
       .map((mid) => ({ feed: pub.id, mid }));
-
     if (toAdd.length) {
       try {
         await sub.addStreams(toAdd);
@@ -558,13 +591,10 @@ export const useCallStore = defineStore("call", () => {
       }
     }
   }
-
   async function forceResubscribe(pid: string, pub: any) {
     const oldSub = subscriptions.get(pid);
     if (!janusRoom.value) return;
-
     if (hasRemoteVideo(pid)) return;
-
     try {
       if (oldSub) {
         await oldSub.unsubscribe().catch(() => {});
@@ -572,31 +602,24 @@ export const useCallStore = defineStore("call", () => {
       const newSub = await janusRoom.value.subscribe([{ feed: pub.id }]);
       subscriptions.set(pid, newSub);
       subMidsMap.set(pid, new Set<any>());
-
       const p = participants.get(pid);
       if (!p) return;
       const stream = p.stream;
-
       attachSubHandlers(pid, newSub, p, stream);
     } catch (e) {
       console.warn("forceResubscribe error", e);
     }
   }
-
   function scheduleEnsureCycle(pid: string, pub: any) {
     if (hasRemoteVideo(pid)) {
       clearSubTimers(pid);
       subState.set(pid, { retries: 0 });
       return;
     }
-
-    // Очищаем все прежние таймеры и выполняем ensure сразу в microtask
     clearSubTimers(pid);
     queueMicrotask(async () => {
       await ensureMissingMids(pid, pub);
-
       if (!hasRemoteVideo(pid)) {
-        // Увеличим счётчик и попробуем принудительный resubscribe
         const tries = (subState.get(pid)?.retries || 0) + 1;
         subState.set(pid, { retries: tries });
         try {
@@ -607,19 +630,15 @@ export const useCallStore = defineStore("call", () => {
       }
     });
   }
-  // Пробуждение в активной вкладке: как только вкладка стала видимой — сразу
-  // ресюмим AudioContext и принудительно проверяем подписки без ожидания таймеров.
   let visibilityListenerAttached = false;
   function setupVisibilityAwakening() {
     if (visibilityListenerAttached || !import.meta.client) return;
     visibilityListenerAttached = true;
-
     document.addEventListener("visibilitychange", async () => {
       if (!document.hidden) {
         try {
           await resumeAnalysers();
         } catch {}
-        // Для всех удалённых участников, где видео не подтянулось — forceResubscribe
         for (const pid of participants.keys()) {
           if (pid === "local") continue;
           if (!hasRemoteVideo(pid)) {
@@ -639,7 +658,6 @@ export const useCallStore = defineStore("call", () => {
   ) {
     sub.onTrackAdded((track: MediaStreamTrack, mid: any) => {
       clearSubTimers(pid);
-
       if (track.kind === "video") {
         stream.addTrack(track);
         stream.getVideoTracks().forEach((t) => {
@@ -651,20 +669,17 @@ export const useCallStore = defineStore("call", () => {
         p.hasAudio = true;
         attachAnalyserForStream(p.id, stream);
       }
-
       if (mid != null) {
         const set = subMidsMap.get(pid);
         if (set) set.add(mid);
       }
     });
-
     sub.onTrackRemoved((track: MediaStreamTrack, mid: any) => {
       stream.removeTrack(track);
       if (mid != null) {
         const set = subMidsMap.get(pid);
         if (set) set.delete(mid);
       }
-
       if (track.kind === "video") {
         const oldTimer = videoHideTimers.get(pid);
         if (oldTimer) clearTimeout(oldTimer);
@@ -678,44 +693,35 @@ export const useCallStore = defineStore("call", () => {
       }
     });
   }
-
   async function subscribe(pub: any) {
     if (!import.meta.client || !janusRoom.value) return;
-
     const pid = String(pub.id);
     const incomingMids = new Set<any>(
       (pub.streams || []).map((s: any) => s.mid).filter((m: any) => m != null)
     );
-
     if (subscriptions.has(pid)) {
       const sub = subscriptions.get(pid);
       const known = subMidsMap.get(pid) || new Set<any>();
-
       const toAdd: any[] = [];
       const toRemove: any[] = [];
-
       incomingMids.forEach((mid) => {
         if (!known.has(mid)) toAdd.push({ feed: pub.id, mid });
       });
       known.forEach((mid) => {
         if (!incomingMids.has(mid)) toRemove.push({ feed: pub.id, mid });
       });
-
       try {
         if (toAdd.length) await sub.addStreams(toAdd);
         if (toRemove.length) await sub.removeStreams(toRemove);
       } catch (e) {
         console.warn("sub update error", e);
       }
-
       scheduleEnsureCycle(pid, pub);
       return;
     }
-
     const sub = await janusRoom.value.subscribe([{ feed: pub.id }]);
     subscriptions.set(pid, sub);
     subMidsMap.set(pid, new Set<any>());
-
     const stream = new MediaStream();
     const meta = decodeDisplay(pub.display || "");
     const p: Participant = {
@@ -730,11 +736,9 @@ export const useCallStore = defineStore("call", () => {
       avatarUrl: meta.avatar,
     };
     participants.set(p.id, p);
-
     attachSubHandlers(pid, sub, p, stream);
     scheduleEnsureCycle(pid, pub);
   }
-
   async function unsubscribe(publisherId: string) {
     const pid = String(publisherId);
     try {
@@ -745,12 +749,10 @@ export const useCallStore = defineStore("call", () => {
       }
     } catch {}
     subMidsMap.delete(pid);
-
     clearSubTimers(pid);
     const vtm = videoHideTimers.get(pid);
     if (vtm) clearTimeout(vtm);
     videoHideTimers.delete(pid);
-
     const p = participants.get(pid);
     if (p) {
       p.stream.getTracks().forEach((t) => t.stop());
@@ -762,7 +764,6 @@ export const useCallStore = defineStore("call", () => {
       analyserMap.delete(pid);
     }
   }
-
   async function leaveCall(resetChannel = true) {
     for (const [pid, sub] of subscriptions.entries()) {
       try {
@@ -771,53 +772,42 @@ export const useCallStore = defineStore("call", () => {
     }
     subscriptions.clear();
     subMidsMap.clear();
-
     clearAllSubTimers();
-
     for (const p of participants.values()) {
       if (p.id !== "local") {
         p.stream.getTracks().forEach((t) => t.stop());
       }
     }
     participants.clear();
-
     clearAnalysers();
-
-    // ВАЖНО: если шли трансляцию — остановим трек шеринга
     try {
       currentScreenTrack.value?.stop();
     } catch {}
     currentScreenTrack.value = null;
-
     localStream.value?.getTracks().forEach((t) => t.stop());
     localStream.value = import.meta.client ? new MediaStream() : null;
     localStream.value = new MediaStream();
-
     localVideoKind.value = "none";
-
     try {
       if (publisher.value) await publisher.value.unpublish();
     } catch {}
     publisher.value = null;
-
     try {
       if (janusRoom.value) await janusRoom.value.leave();
     } catch {}
     janusRoom.value = null;
-
     callEnabled.value = false;
     settings.toggleCall(false);
     if (resetChannel) activeVoiceChannelId.value = null;
     focusParticipantId.value = null;
     shareConstraints.value = null;
     callEnabled.value = false;
-    isJoining.value = false; // на всякий случай
+    isJoining.value = false;
     settings.toggleCall(false);
     if (resetChannel) activeVoiceChannelId.value = null;
     focusParticipantId.value = null;
     shareConstraints.value = null;
   }
-
   async function resumeAnalysers() {
     if (!import.meta.client) return;
     try {
@@ -831,7 +821,6 @@ export const useCallStore = defineStore("call", () => {
       } catch {}
     }
   }
-
   async function toggleMic(on: boolean) {
     settings.toggleMicrophone(on);
     if (!callEnabled.value) return;
@@ -839,11 +828,9 @@ export const useCallStore = defineStore("call", () => {
     const me = participants.get("local");
     if (me) me.hasAudio = !!on;
   }
-
   async function toggleCamera(on: boolean) {
     settings.toggleVideo(on);
     if (!callEnabled.value) return;
-
     if (localVideoKind.value !== "screenshare") {
       localVideoKind.value = on ? "camera" : "none";
     }
@@ -853,7 +840,6 @@ export const useCallStore = defineStore("call", () => {
   }
   async function requestScreenTrack() {
     const sc = shareConstraints.value || {};
-    // Важно: getDisplayMedia требует пользовательского жеста и https/localhost
     const disp = await navigator.mediaDevices.getDisplayMedia({
       video: {
         frameRate: sc.frameRate ?? 30,
@@ -865,27 +851,23 @@ export const useCallStore = defineStore("call", () => {
     });
     const track = disp.getVideoTracks()[0];
     if (!track) throw new Error("No video track from getDisplayMedia");
-    // Авто-выключение при остановке пользователем
     track.addEventListener("ended", () => {
       toggleScreenshare(false);
     });
     return track;
   }
-
   async function toggleScreenshare(
     on: boolean,
     opts?: { width?: number; height?: number; frameRate?: number }
   ) {
     if (!callEnabled.value) return;
-
     if (on) {
       shareConstraints.value = opts || null;
       try {
-        const track = await requestScreenTrack(); // ОТКРЫВАЕМ ОКНО ВЫБОРА
+        const track = await requestScreenTrack();
         currentScreenTrack.value = track;
         localVideoKind.value = "screenshare";
       } catch (e: any) {
-        // Пользователь мог нажать «Отмена»
         console.warn("Screenshare denied/cancelled", e?.name || e);
         shareConstraints.value = null;
         localVideoKind.value = settings.videoEnabled ? "camera" : "none";
@@ -899,17 +881,13 @@ export const useCallStore = defineStore("call", () => {
       shareConstraints.value = null;
       localVideoKind.value = settings.videoEnabled ? "camera" : "none";
     }
-
     await publishWithCurrentSettings();
-
     const me = participants.get("local");
     if (me) {
       me.hasScreen = on;
-      // hasVideo = только камера, а не любой видео-трек
       me.hasVideo = settings.videoEnabled && localVideoKind.value === "camera";
     }
   }
-
   function setMicDevice(id: string) {
     selectedMicId.value = id;
     persistDevices();
@@ -917,7 +895,6 @@ export const useCallStore = defineStore("call", () => {
       publishWithCurrentSettings();
     }
   }
-
   function setCamDevice(id: string) {
     selectedCamId.value = id;
     persistDevices();
@@ -925,46 +902,44 @@ export const useCallStore = defineStore("call", () => {
       publishWithCurrentSettings();
     }
   }
-
   function setOutputDevice(id: string) {
     selectedOutputId.value = id;
     persistDevices();
   }
-
-  // Строим аудио/видео треки для публикации
-  function buildTracksForCurrent(): any[] {
+  async function buildTracksForCurrent(): Promise<any[]> {
     const tracks: any[] = [];
-
     const hasAudioSender = hasPublishedSender("audio");
     const hasVideoSender = hasPublishedSender("video");
 
-    // AUDIO (микрофон)
+    // --- АУДИО: единый микшированный трек микрофон+soundboard ---
     if (settings.microphoneEnabled) {
-      const t: any = {
-        type: "audio",
-        capture: selectedMicId.value
-          ? { deviceId: { exact: selectedMicId.value } }
-          : true,
-      };
-      if (hasAudioSender) t.replace = true;
-      tracks.push(t);
+      const audioTrack = await ensureMixedAudioTrack();
+
+      if (audioTrack) {
+        const t: any = {
+          type: "audio",
+          capture: audioTrack as MediaStreamTrack,
+        };
+        if (hasAudioSender) t.replace = true;
+        tracks.push(t);
+      } else if (hasAudioSender) {
+        // если не смогли получить трек — удаляем аудиосендер
+        tracks.push({ type: "audio", remove: true });
+      }
     } else if (hasAudioSender) {
-      // Микрофон выключен → удаляем существующий sender
       tracks.push({ type: "audio", remove: true });
     }
 
-    // VIDEO
+    // --- ВИДЕО как было ---
     if (localVideoKind.value == "screenshare") {
       if (currentScreenTrack.value) {
         const t: any = {
           type: "video",
-          // Важно: для шеринга передаём сам MediaStreamTrack через capture
           capture: currentScreenTrack.value as MediaStreamTrack,
         };
-        if (hasVideoSender) t.replace = true; // заменить камеру/старый трек на экран
+        if (hasVideoSender) t.replace = true;
         tracks.push(t);
       } else if (hasVideoSender) {
-        // режим шеринга включен, но трека нет → удалим существующее видео
         tracks.push({ type: "video", remove: true });
       }
     } else if (localVideoKind.value == "camera" && settings.videoEnabled) {
@@ -977,55 +952,46 @@ export const useCallStore = defineStore("call", () => {
       if (hasVideoSender) t.replace = true;
       tracks.push(t);
     } else if (hasVideoSender) {
-      // видео выключено → удаляем существующий video sender
       tracks.push({ type: "video", remove: true });
     }
 
     return tracks;
   }
-
   async function publishWithCurrentSettings() {
     const displayPayload = encodeDisplay(
       profiles.name?.trim() || "Без имени",
       profiles.avatar || ""
     );
-
-    const tracks = buildTracksForCurrent();
+    const tracks = await buildTracksForCurrent();
     const wantAnyAdd = tracks.some((t) => !t.remove);
-
-    // Нет паблишера
     if (!publisher.value) {
-      if (!wantAnyAdd) return; // нечего публиковать
+      if (!wantAnyAdd) return;
       publisher.value = await janusRoom.value.publish({
         publishOptions: { display: displayPayload },
         mediaOptions: { tracks },
       });
-
       publisher.value.onTrackAdded((track: MediaStreamTrack) => {
         if (!localStream.value) localStream.value = new MediaStream();
-
         if (track.kind === "video") {
           localStream.value.addTrack(track);
           localStream.value.getVideoTracks().forEach((t) => {
             if (t !== track) localStream.value!.removeTrack(t);
           });
-
           if (localVideoKind.value === "screenshare") {
             currentScreenTrack.value = track;
           }
         } else if (track.kind === "audio") {
           localStream.value.addTrack(track);
         }
-
         const me = participants.get("local");
         if (me) {
           if (track.kind === "video") {
             if (localVideoKind.value === "screenshare") {
               me.hasScreen = true;
-              me.hasVideo = false; // только шеринг
+              me.hasVideo = false;
             } else if (localVideoKind.value === "camera") {
               me.hasVideo = true;
-              me.hasScreen = false; // только камера
+              me.hasScreen = false;
             } else {
               me.hasVideo = false;
               me.hasScreen = false;
@@ -1037,18 +1003,15 @@ export const useCallStore = defineStore("call", () => {
           }
         }
       });
-
       publisher.value.onTrackRemoved((track: MediaStreamTrack) => {
         if (!localStream.value) return;
         localStream.value.removeTrack(track);
-
         if (track === currentScreenTrack.value) {
           try {
             track.stop();
           } catch {}
           currentScreenTrack.value = null;
         }
-
         const me = participants.get("local");
         if (me) {
           if (track.kind === "video") {
@@ -1067,13 +1030,10 @@ export const useCallStore = defineStore("call", () => {
           }
         }
       });
-
       return;
     }
-    // Есть паблишер → рестарт/замена треков
     await publisher.value.restart({ tracks }, { display: displayPayload });
   }
-
   watch(
     () => [profiles.name, profiles.avatar] as const,
     ([nm, av]) => {
@@ -1087,7 +1047,6 @@ export const useCallStore = defineStore("call", () => {
   watch(
     () => settings.audioEnabled,
     (enabled) => {
-      // Проходим по всем участникам, кроме локального
       participants.forEach((p, id) => {
         if (id === "local") return;
         p.stream.getAudioTracks().forEach((t) => {
@@ -1100,7 +1059,6 @@ export const useCallStore = defineStore("call", () => {
   function setFocusParticipant(id: string | null) {
     focusParticipantId.value = id;
   }
-
   return {
     callEnabled,
     activeVoiceChannelId,
@@ -1115,19 +1073,16 @@ export const useCallStore = defineStore("call", () => {
     joinVoiceChannel,
     leaveCall,
     cancelJoin,
-
     toggleMic,
     toggleCamera,
     toggleScreenshare,
-
     setMicDevice,
     setCamDevice,
     setOutputDevice,
     setFocusParticipant,
-
     resumeAnalysers,
-
     createJanusRoom,
     destroyJanusRoom,
+    playSoundboardClip,
   };
 });

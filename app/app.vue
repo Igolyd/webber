@@ -1,28 +1,14 @@
 <template>
   <v-app class="theme-root">
-    <!-- База: общий фон -->
     <div class="app-bg-base"></div>
-    <!-- Overlay для читаемости поверх картинок -->
     <div class="app-bg-overlay"></div>
 
     <v-app-bar color="var(--rnav-elev-1)" elevation="0" height="48">
-      <template v-slot:image>
-        <v-img
-          gradient="
-      color-mix(
-        in srgb,
-        var(--lnav-background) 70%,
-        var(--gradient-bg-color) 30%
-      )
-      0%,
-     var(--rnav-elev-1) 60%,
-    var(--rnav-elev-1) 100%"
-        ></v-img>
+      <template #image>
+        <v-img :gradient="appBarGradient" />
       </template>
+
       <v-spacer />
-      <!-- <v-avatar :size="40" :rounded="99999">
-        <v-img :src="defaultLogo" cover />
-      </v-avatar> -->
       <v-spacer />
     </v-app-bar>
 
@@ -35,7 +21,6 @@
       <AlertOverlayStack />
     </client-only>
 
-    <!-- Theme bridge для Vuetify -->
     <ThemeBridge />
   </v-app>
 </template>
@@ -46,6 +31,14 @@ import CallWindowProvider from "~/components/CallWindowProvider.vue";
 import ThemeBridge from "./components/system/ThemeBridge.vue";
 import AlertOverlayStack from "./components/alerts/AlertOverlayStack.vue";
 import "vue-gif-emoji-picker/dist/style.css";
+
+const appBarGradient =
+  "linear-gradient(" +
+  "to top," +
+  "color-mix(in srgb, var(--lnav-background) 70%, var(--gradient-bg-color) 30%) 0%," +
+  "var(--rnav-elev-1) 60%," +
+  "var(--rnav-elev-1) 100%" +
+  ")";
 </script>
 
 <style>
