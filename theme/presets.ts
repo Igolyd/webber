@@ -354,7 +354,7 @@ const violetDarkVars = sectionDefaults({
   "--lnav-bg-color": "#3e1768", //фон левой навигации
   "--mymini-bg-color": "#332A49",
   "--input-bg-color": "#332a49", //фон поля ввода
-  "--gradient-bg-color": "#ffff00a",
+  "--gradient-bg-color": "#ffff00",
 } as any);
 
 // ——— Синие
