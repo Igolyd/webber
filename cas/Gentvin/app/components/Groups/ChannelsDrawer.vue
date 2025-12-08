@@ -1,0 +1,163 @@
+<template>
+  <v-navigation-drawer
+    v-model="model"
+    :permanent="!isSmAndDown"
+    :temporary="isSmAndDown"
+    width="360"
+    class="theme-drawer-left scope-lnav rounded-ts-lg"
+    :class="{ 'lnav-has-image': lnavHasImage }"
+    :scrim="isSmAndDown"
+  >
+    <div class="px-4 py-2 d-flex align-center justify-space-between">
+      <h2 class="text-h6 mb-0" :title="selectedGroupName">
+        “{{ selectedGroupName }}”
+      </h2>
+      <GroupActionsMenu
+        @open-group-settings="$emit('open-group-settings')"
+        @invite-people="$emit('invite-people')"
+        @open-create-channel="$emit('open-create-channel')"
+        @open-create-directory="$emit('open-create-directory')"
+        @create-event="$emit('create-event')"
+        @publish-news="$emit('publish-news')"
+        @open-notification-settings="$emit('open-notification-settings')"
+        @open-privacy-settings="$emit('open-privacy-settings')"
+      />
+    </div>
+
+    <v-divider />
+
+    <!-- НОВОЕ: плашки Новости / События -->
+    <div class="px-4 pt-2 pb-1 d-flex flex-column gap-1">
+      <v-chip
+        v-if="props.ownerId"
+        variant="flat"
+        color="primary"
+        class="mb-1"
+        @click="$emit('open-news-feed')"
+      >
+        <v-icon start size="16">mdi-newspaper-variant-outline</v-icon>
+        Новости
+      </v-chip>
+      <v-chip
+        v-if="props.ownerId"
+        variant="flat"
+        color="secondary"
+        class="mb-1"
+        @click="$emit('open-events-feed')"
+      >
+        <v-icon start size="16">mdi-calendar-star</v-icon>
+        События
+      </v-chip>
+    </div>
+    <v-list class="py-0" density="comfortable">
+      <DirectorySection
+        v-for="section in directoriesWithChannels"
+        :key="section.dir.id"
+        :section="section"
+        :active-text-channel-id="activeTextChannelId"
+        @toggle-directory="$emit('toggle-directory', section.dir.id)"
+        @edit-directory="$emit('edit-directory', $event)"
+        @delete-directory="$emit('delete-directory', $event)"
+        @edit-channel="$emit('edit-channel', $event)"
+        @delete-channel="$emit('delete-channel', $event)"
+        @channel-click="$emit('channel-click', $event)"
+        @open-create-channel="$emit('open-create-channel')"
+      />
+    </v-list>
+    <template #append>
+      <slot name="append" />
+    </template>
+  </v-navigation-drawer>
+</template>
+<script setup lang="ts">
+import { computed } from "vue";
+import GroupActionsMenu from "./GroupActionsMenu.vue";
+import DirectorySection from "./DirectorySection.vue";
+interface Channel {
+  id: string;
+  name: string;
+  type: "text" | "voice";
+  directoryId?: string | null;
+  position?: number | null;
+}
+interface Directory {
+  id: string;
+  groupId: string;
+  name: string;
+  position: number;
+  isCollapsed: boolean;
+  createdAt?: string;
+}
+type Section = { dir: Directory; channels: Channel[] };
+const props = defineProps<{
+  modelValue: boolean;
+  isSmAndDown: boolean;
+  selectedGroupName: string;
+  directoriesWithChannels: Section[];
+  activeTextChannelId: string;
+  ownerType?: "group" | "author";
+  ownerId?: string;
+}>();
+const emit = defineEmits([
+  "update:modelValue",
+  "open-group-settings",
+  "invite-people",
+  "open-create-channel",
+  "open-create-directory",
+  "create-event",
+  "publish-news",
+  "open-notification-settings",
+  "open-privacy-settings",
+  "toggle-directory",
+  "edit-directory",
+  "delete-directory",
+  "edit-channel",
+  "delete-channel",
+  "channel-click",
+  "open-news-feed",
+  "open-events-feed",
+]);
+const lnavHasImage = computed(() => {
+  if (typeof window === "undefined") return false;
+  const cs = getComputedStyle(document.documentElement);
+  const img = cs.getPropertyValue("--app-bg-image").trim();
+  // если есть url(...) или gradient(...), считаем, что фон — картинка/градиент
+  return img && img !== "none";
+});
+const model = computed({
+  get: () => props.modelValue,
+  set: (v: boolean) => emit("update:modelValue", v),
+});
+</script>
+<style scoped>
+.scope-lnav {
+  --v-theme-surface: var(--lnav-background);
+  --v-theme-on-surface: var(--lnav-on-surface);
+  --v-theme-outline: var(--lnav-border);
+  --v-theme-surface-variant: var(--lnav-elev-1);
+}
+.theme-drawer-left {
+  background: linear-gradient(
+    to top,
+    /* низ — почти белый, но с тоном темы */
+      color-mix(
+        in srgb,
+        var(--lnav-background) 70%,
+        var(--gradient-bg-color) 30%
+      )
+      0%,
+    /* дальше — нормальный цвет темы */ var(--lnav-background) 60%,
+    var(--lnav-background) 100%
+  ) !important;
+  color: var(
+    --lnav-on-surface,
+    var(--app-on-surface, var(--v-theme-on-surface))
+  );
+  border-right: 1px solid var(--lnav-border, var(--app-outline-variant));
+  border-top: 1px solid var(--lnav-border, var(--app-outline-variant));
+  box-shadow: none !important;
+}
+.gap-1 {
+  gap: 4px;
+}
+</style>

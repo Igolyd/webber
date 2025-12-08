@@ -1,15 +1,15 @@
 <!-- components/Settings/App/AppAV.vue -->
 <template>
-  <v-container class="scroll-y">
+  <v-container>
     <v-tabs v-model="tab" grow>
       <v-tab value="audio">Аудио</v-tab>
       <v-tab value="video">Видео</v-tab>
       <v-tab value="soundbar">Звуковая панель</v-tab>
     </v-tabs>
 
-    <v-window v-model="tab" class="mt-4 scope-main" >
+    <v-window v-model="tab" class="mt-4">
       <v-window-item value="audio">
-        <v-card class="main-card">
+        <v-card>
           <v-card-text>
             <v-row class="mb-4" align="center">
               <v-col cols="12" md="6">
@@ -92,7 +92,7 @@
       </v-window-item>
 
       <v-window-item value="video">
-        <v-card class="main-card">
+        <v-card>
           <v-card-text>
             <v-row>
               <v-col cols="12" md="6">
@@ -116,7 +116,7 @@
       </v-window-item>
 
       <v-window-item value="soundbar">
-        <v-card class="main-card">
+        <v-card>
           <v-card-text>
             Здесь может быть микшер источников/уведомлений, баланс, тест
             воспроизведения и т.п. (пока заглушка).
@@ -354,40 +354,3 @@ export default defineComponent({
   },
 });
 </script>
-<style lang="css" scoped>
-  /* Секция main: прокидываем секционные токены в локальную тему Vuetify */
-.scope-main {
-  background: var(--main-background) !important;
-  color: var(--main-on-surface) !important;
-  border: 1px solid var(--main-border) !important;
-  box-shadow: none;
-  border-radius: 12px;
-}
-
-/* Карточка использует фон/бордеры из main */
-.main-card {
-  background: var(--main-background) !important;
-  color: var(--main-on-surface) !important;
-  border: 1px solid var(--main-border) !important;
-  box-shadow: none;
-  border-radius: 12px;
-}
-
-/* При необходимости можно подсветить hover на внутренних списках/элементах
-:deep(.v-list-item:hover) {
-  background: var(--main-hover);
-}
-*/
-.scroll-y {
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.scroll-y::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-.scroll-y {
-  scrollbar-width: none;
-}
-</style>

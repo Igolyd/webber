@@ -1,0 +1,600 @@
+<template>
+  <div class="my-profile-wrapper scope-mymini">
+    <v-hover v-slot="{ isHovering, props: hoverProps }">
+      <v-card
+        v-bind="hoverProps"
+        elevation="8"
+        color="transparent"
+        class="my-profile-container w-100"
+        :style="profileBadgeStyle(isHovering)"
+      >
+        <v-card-item class="py-2 px-3">
+          <div class="d-flex align-center justify-space-between ga-2">
+            <!-- Меню полного профиля -->
+            <v-menu
+              v-model="showFullProfile"
+              location="top"
+              origin="bottom"
+              :close-on-content-click="false"
+              :scrim="false"
+              transition="scale-transition"
+              content-class="menu-scope my-profile-menu"
+            >
+              <template #activator="{ props }">
+                <div
+                  class="profile-activator d-flex align-center ga-3 flex-1-1 cursor-pointer"
+                  v-bind="props"
+                  role="button"
+                  tabindex="0"
+                  @keydown.enter.prevent="showFullProfile = true"
+                  @keydown.space.prevent="showFullProfile = true"
+                >
+                  <div class="avatar-cell">
+                    <v-avatar :size="avatarSize" :rounded="99999">
+                      <v-img
+                        :src="profiles.avatar || defaultAvatar"
+                        cover
+                        eager
+                      />
+                    </v-avatar>
+                    <span
+                      class="mini-status-dot"
+                      :class="`st-${profiles.status || 'online'}`"
+                    ></span>
+                  </div>
+
+                  <div class="text-truncate" style="min-width: 0">
+                    <div
+                      class="text-subtitle-2 font-weight-medium text-truncate"
+                    >
+                      {{ profiles.name || "Без имени" }}
+                    </div>
+                    <div
+                      class="text-caption text-medium-emphasis text-truncate"
+                    >
+                      {{ profiles.quote || "Без цитаты" }}
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <div class="menu-surface">
+                <FullProfileTabNavigation
+                  @openWinProfile="
+                    showWinProfile = true;
+                    showFullProfile = false;
+                  "
+                />
+              </div>
+            </v-menu>
+
+            <div class="d-flex align-center ga-1">
+              <!-- Микрофон -->
+              <div class="activator-wrap">
+                <v-btn
+                  :class="
+                    settings.microphoneEnabled
+                      ? 'btn-primary-tonal'
+                      : 'btn-surface-variant'
+                  "
+                  variant="text"
+                  :icon="
+                    settings.microphoneEnabled
+                      ? 'mdi-microphone'
+                      : 'mdi-microphone-off'
+                  "
+                  :density="btnDensity"
+                  @click.stop="onToggleMic"
+                  @contextmenu.prevent.stop="openMicMenu = true"
+                />
+                <v-menu
+                  v-model="openMicMenu"
+                  activator="parent"
+                  location="bottom"
+                  content-class="menu-scope"
+                >
+                  <v-list
+                    density="compact"
+                    color="transparent"
+                    style="min-width: 260px"
+                  >
+                    <v-list-subheader>Микрофон</v-list-subheader>
+                    <v-list-item
+                      v-for="d in inputDevices"
+                      :key="d.deviceId"
+                      @click="setMic(d.deviceId)"
+                    >
+                      <v-list-item-title>{{
+                        d.label || "Микрофон"
+                      }}</v-list-item-title>
+                      <template #append>
+                        <v-icon
+                          v-if="call.selectedMicId === d.deviceId"
+                          color="primary"
+                          >mdi-check</v-icon
+                        >
+                      </template>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </div>
+
+              <!-- Динамики -->
+              <div class="activator-wrap">
+                <v-btn
+                  :class="
+                    settings.audioEnabled
+                      ? 'btn-primary-tonal'
+                      : 'btn-surface-variant'
+                  "
+                  variant="outlined"
+                  :icon="
+                    settings.audioEnabled ? 'mdi-volume-high' : 'mdi-volume-off'
+                  "
+                  :density="btnDensity"
+                  @click.stop="onToggleAudio"
+                  @contextmenu.prevent.stop="openSpkMenu = true"
+                />
+                <v-menu
+                  v-model="openSpkMenu"
+                  activator="parent"
+                  location="bottom"
+                  content-class="menu-scope"
+                >
+                  <v-list
+                    density="compact"
+                    color="transparent"
+                    style="min-width: 260px"
+                  >
+                    <v-list-subheader>Динамики</v-list-subheader>
+                    <v-list-item
+                      v-for="d in outputDevices"
+                      :key="d.deviceId"
+                      @click="setOutput(d.deviceId)"
+                    >
+                      <v-list-item-title>{{
+                        d.label || "Динамики"
+                      }}</v-list-item-title>
+                      <template #append>
+                        <v-icon
+                          v-if="call.selectedOutputId === d.deviceId"
+                          color="primary"
+                          >mdi-check</v-icon
+                        >
+                      </template>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+              </div>
+              <!-- Звуковая панель — показываем только в звонке -->
+              <div v-if="call.callEnabled" class="activator-wrap">
+                <v-menu
+                  v-model="openSoundMenu"
+                  activator="parent"
+                  location="bottom"
+                  content-class="menu-scope"
+                >
+                  <template #activator="{ props }">
+                    <v-btn
+                      v-bind="props"
+                      icon
+                      :density="btnDensity"
+                      variant="text"
+                      :title="'Открыть звуковую панель'"
+                    >
+                      <v-icon>mdi-music-note</v-icon>
+                    </v-btn>
+                  </template>
+
+                  <v-card class="pa-2" min-width="260">
+                    <div class="d-flex align-center mb-2">
+                      <v-icon class="mr-1">mdi-music</v-icon>
+                      <span class="text-subtitle-2">Звуковая панель</span>
+                      <v-spacer />
+                      <NuxtLink
+                        to="/SettingsProfileUser"
+                        class="text-decoration-none"
+                      >
+                        <v-btn
+                          size="x-small"
+                          variant="text"
+                          icon
+                          :title="'Настройки звуковой панели'"
+                        >
+                          <v-icon size="18">mdi-cog-outline</v-icon>
+                        </v-btn>
+                      </NuxtLink>
+                    </div>
+
+                    <v-list
+                      v-if="soundClips.length"
+                      density="compact"
+                      color="transparent"
+                    >
+                      <v-list-item
+                        v-for="clip in soundClips"
+                        :key="clip.id"
+                        @click="onPlaySound(clip)"
+                      >
+                        <v-list-item-title class="text-truncate">
+                          {{ clip.name }}
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                          ~{{ clip.durationSec.toFixed(1) }} с
+                        </v-list-item-subtitle>
+                      </v-list-item>
+                    </v-list>
+
+                    <div v-else class="text-caption text-medium-emphasis">
+                      Нет звуков. Добавьте их в настройках.
+                    </div>
+                  </v-card>
+                </v-menu>
+              </div>
+
+              <!-- Настройки -->
+              <NuxtLink to="/SettingsProfileUser">
+                <v-btn
+                  icon="mdi-cog-outline"
+                  :density="btnDensity"
+                  variant="text"
+                />
+              </NuxtLink>
+            </div>
+          </div>
+        </v-card-item>
+
+        <v-expand-transition>
+          <div v-show="call.callEnabled || call.isJoining">
+            <v-divider />
+            <v-card-text class="py-2">
+              <div class="d-flex align-center ga-2 flex-wrap">
+                <!-- Кнопка в зависимости от состояния -->
+                <v-btn
+                  v-if="!call.isJoining && call.callEnabled"
+                  variant="text"
+                  color="error"
+                  prepend-icon="mdi-phone-hangup"
+                  :density="btnDensity"
+                  @click="leave"
+                >
+                  Отключиться
+                </v-btn>
+
+                <v-btn
+                  v-else-if="call.isJoining"
+                  variant="text"
+                  color="error"
+                  prepend-icon="mdi-close"
+                  :density="btnDensity"
+                  @click="cancelJoin"
+                >
+                  Отменить подключение
+                </v-btn>
+
+                <!-- Индикатор "подключаемся" -->
+                <div v-if="call.isJoining" class="d-flex align-center ga-2">
+                  <v-progress-circular
+                    indeterminate
+                    size="20"
+                    width="2"
+                    color="primary"
+                  />
+                  <span class="text-caption text-medium-emphasis">
+                    Подключаемся к голосовому каналу...
+                  </span>
+                </div>
+
+                <!-- Остальной набор кнопок (камера, трансляция) имеет смысл только,
+когда уже подключены -->
+                <template v-if="call.callEnabled && !call.isJoining">
+                  <!-- Камера -->
+                  <div class="activator-wrap">
+                    <v-btn
+                      :class="
+                        settings.videoEnabled
+                          ? 'btn-primary-tonal'
+                          : 'btn-surface-variant'
+                      "
+                      variant="text"
+                      :prepend-icon="
+                        settings.videoEnabled ? 'mdi-video' : 'mdi-video-off'
+                      "
+                      :density="btnDensity"
+                      @click="onToggleCamera"
+                      @contextmenu.prevent.stop="openCamMenu = true"
+                    >
+                      Видео
+                    </v-btn>
+                    <v-menu
+                      v-model="openCamMenu"
+                      activator="parent"
+                      location="bottom"
+                      content-class="menu-scope"
+                    >
+                      <v-list
+                        density="compact"
+                        color="transparent"
+                        style="min-width: 260px"
+                      >
+                        <v-list-subheader>Камера</v-list-subheader>
+                        <v-list-item
+                          v-for="d in videoDevices"
+                          :key="d.deviceId"
+                          @click="setCam(d.deviceId)"
+                        >
+                          <v-list-item-title>{{
+                            d.label || "Камера"
+                          }}</v-list-item-title>
+                          <template #append>
+                            <v-icon
+                              v-if="call.selectedCamId === d.deviceId"
+                              color="primary"
+                              >mdi-check</v-icon
+                            >
+                          </template>
+                        </v-list-item>
+                      </v-list>
+                    </v-menu>
+                  </div>
+
+                  <!-- Трансляция -->
+                  <div class="activator-wrap">
+                    <v-btn
+                      variant="text"
+                      :color="
+                        call.localVideoKind === 'screenshare'
+                          ? 'primary'
+                          : 'surface-variant'
+                      "
+                      :prepend-icon="
+                        call.localVideoKind === 'screenshare'
+                          ? 'mdi-television-play'
+                          : 'mdi-television-stop'
+                      "
+                      :density="btnDensity"
+                      @click="toggleShareDefault"
+                      @contextmenu.prevent.stop="openShareMenu = true"
+                    >
+                      Трансляция
+                    </v-btn>
+                    <v-menu
+                      v-model="openShareMenu"
+                      activator="parent"
+                      location="bottom"
+                      content-class="menu-scope"
+                    >
+                      <v-list density="compact" color="transparent">
+                        <v-list-subheader>Качество шэринга</v-list-subheader>
+                        <v-list-item @click="toggleSharePreset(1280, 720, 60)"
+                          >720p @ 60fps</v-list-item
+                        >
+                        <v-list-item @click="toggleSharePreset(1280, 720, 30)"
+                          >720p @ 30fps</v-list-item
+                        >
+                        <v-list-item @click="toggleSharePreset(854, 480, 30)"
+                          >480p @ 30fps</v-list-item
+                        >
+                        <v-list-item @click="toggleSharePreset(854, 480, 15)"
+                          >480p @ 15fps</v-list-item
+                        >
+                      </v-list>
+                    </v-menu>
+                  </div>
+                </template>
+              </div>
+            </v-card-text>
+          </div>
+        </v-expand-transition>
+      </v-card>
+    </v-hover>
+    <WinProfile v-model="showWinProfile" />
+  </div>
+</template>
+
+<script lang="ts">
+import { defineComponent, reactive, toRefs, computed, onMounted } from "vue";
+import { useDisplay } from "vuetify";
+import { useSettingsStore } from "~/stores/settings";
+import { useProfilesStore } from "~/stores/user/profiles";
+import { useCallStore } from "~/stores/call";
+import FullProfileTabNavigation from "./FullProfileTabNavigation.vue";
+import WinProfile from "./WinProfile.vue";
+import dfAvatal from "../../assets/profile/profile_exp.jpg";
+import { useAVStore } from "~/stores/app/av";
+import { useSoundboardStore } from "~/stores/soundboard";
+
+export default defineComponent({
+  name: "MyProfileTabNavigation",
+  components: { FullProfileTabNavigation, WinProfile }, // ← добавили WinProfile
+  setup() {
+    const settings = useSettingsStore();
+    const profiles = useProfilesStore();
+    const call = useCallStore();
+    const av = useAVStore();
+    const soundboard = useSoundboardStore();
+
+    const defaultAvatar = dfAvatal;
+
+    const state = reactive({
+      showFullProfile: false,
+      showWinProfile: false, // ← новый/вернувшийся флаг
+      openMicMenu: false,
+      openSpkMenu: false,
+      openCamMenu: false,
+      openShareMenu: false,
+      openSoundMenu: false,
+      inputDevices: [] as MediaDeviceInfo[],
+      outputDevices: [] as MediaDeviceInfo[],
+      videoDevices: [] as MediaDeviceInfo[],
+    });
+
+    const soundClips = computed(() => soundboard.myClips);
+    const display = useDisplay();
+    const avatarSize = computed(() => (display.xs.value ? 40 : 48));
+    const btnDensity = computed(() =>
+      display.xs.value ? "compact" : "comfortable"
+    );
+
+    async function refreshDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        state.inputDevices = devices.filter((d) => d.kind === "audioinput");
+        state.outputDevices = devices.filter((d) => d.kind === "audiooutput");
+        state.videoDevices = devices.filter((d) => d.kind === "videoinput");
+      } catch (e) {
+        console.warn("Не удалось получить устройства медиа:", e);
+      }
+    }
+    onMounted(refreshDevices);
+
+    const onToggleMic = () => call.toggleMic(!settings.microphoneEnabled);
+    const onToggleAudio = () => settings.toggleAudio(!settings.audioEnabled);
+    const onToggleCamera = () => call.toggleCamera(!settings.videoEnabled);
+    const toggleShareDefault = () =>
+      call.toggleScreenshare(call.localVideoKind !== "screenshare");
+    const toggleSharePreset = (w: number, h: number, fps: number) => {
+      call.toggleScreenshare(true, { width: w, height: h, frameRate: fps });
+      state.openShareMenu = false;
+    };
+    const leave = () => call.leaveCall();
+    const cancelJoin = () => call.cancelJoin();
+    const setMic = (id: string) => {
+      call.setMicDevice(id); // переключаем в Janus
+      av.inputDeviceId = id; // синхронизируем настройки
+      av.saveDevices({ inputId: id });
+    };
+    const setCam = (id: string) => {
+      call.setCamDevice(id);
+      try {
+        localStorage.setItem("cameraDevice", id);
+      } catch {}
+    };
+    const setOutput = (id: string) => {
+      call.setOutputDevice(id);
+      av.outputDeviceId = id;
+      av.saveDevices({ outputId: id });
+    };
+    const onPlaySound = (clip: any) => {
+      // пока вызываем метод из callStore (ниже добавим)
+      call.playSoundboardClip(clip);
+      // можно закрыть меню:
+      state.openSoundMenu = false;
+    };
+    function isGradientLike(val?: string) {
+      if (!val) return false;
+      const v = val.toLowerCase().trim();
+      return v.includes("gradient(") || v.startsWith("url(");
+    }
+
+    function profileBadgeStyle(isHovering: boolean) {
+      const badge = profiles.badge as any;
+      const shape = (badge?.shape ||
+        (profiles as any).badgeShape ||
+        "rounded") as "pill" | "rounded" | "square";
+      const color = badge?.color as string | undefined;
+      const style: Record<string, string> = {
+        transition:
+          "filter .18s ease, background-color .18s ease, background .18s ease, border-radius .18s ease",
+        borderRadius:
+          shape === "pill" ? "9999px" : shape === "square" ? "8px" : "14px",
+        filter: isHovering
+          ? "none"
+          : "opacity(0.75) saturate(0.92) brightness(0.98)",
+      };
+      if (color) {
+        if (isGradientLike(color)) {
+          style.background = color;
+        } else {
+          style.backgroundColor = color;
+        }
+      } else {
+        style.background =
+          "linear-gradient(180deg, rgba(120,120,120,.15), rgba(80,80,80,.2))";
+      }
+      return style;
+    }
+
+    return {
+      ...toRefs(state),
+      settings,
+      profiles,
+      call,
+      avatarSize,
+      btnDensity,
+      defaultAvatar,
+      onToggleMic,
+      onToggleAudio,
+      onToggleCamera,
+      toggleShareDefault,
+      toggleSharePreset,
+      leave,
+      cancelJoin,
+      setMic,
+      setCam,
+      setOutput,
+      profileBadgeStyle,
+      soundClips,
+      onPlaySound,
+      profileBadgeStyle,
+    };
+  },
+});
+</script>
+
+<style scoped>
+.cursor-pointer {
+  cursor: pointer;
+}
+.my-profile-wrapper {
+  position: relative;
+  background: transparent !important;
+  color: var(--lnav-on-surface);
+}
+.my-profile-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* background: var(--lnav-background); */
+  z-index: 0;
+}
+.my-profile-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+.avatar-cell {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  overflow: visible;
+}
+.mini-status-dot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  margin-bottom: 4%;
+  margin-right: 4%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #000;
+  z-index: 2;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+.st-online {
+  background: #3fb950;
+}
+.st-idle {
+  background: #f2c94c;
+}
+.st-dnd {
+  background: #f44336;
+}
+.st-invisible {
+  background: #9aa0a6;
+}
+.profile-activator {
+  overflow: visible;
+}
+</style>

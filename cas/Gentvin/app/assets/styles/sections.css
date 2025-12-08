@@ -1,0 +1,93 @@
+/* Общий сброс overlay у всех списков */
+:root :where(.v-list-item__overlay) {
+  background: transparent !important;
+}
+
+/* Левая навигация */
+.scope-lnav :where(.v-list) { background: transparent !important; }
+.scope-lnav :where(.v-list-item) { background: transparent !important; }
+.scope-lnav :where(.v-list-item:hover .v-list-item__overlay) {
+  background: var(--lnav-hover, var(--app-hover-color)) !important;
+  opacity: 1 !important;
+}
+
+/* Основная область */
+.scope-main {
+  /* Привязываем Vuetify-шные переменные к секционным токенам main */
+  --v-theme-surface: var(--main-background);
+  --v-theme-on-surface: var(--main-on-surface);
+  --v-theme-outline: var(--main-border);
+  --v-theme-surface-variant: var(--main-elev-1);
+
+  background: var(--main-background);
+  color: var(--main-on-surface);
+}
+
+/* Список — прозрачный, фон берёт из .scope-main */
+.scope-main :where(.v-list) { background: transparent !important; }
+.scope-main :where(.v-list-item) { background: transparent !important; }
+.scope-main :where(.v-list-item:hover .v-list-item__overlay) {
+  background: var(--main-hover, var(--app-hover-color)) !important;
+  opacity: 1 !important;
+}
+
+/* Правая навигация */
+.scope-rnav :where(.v-list) { background: transparent !important; }
+.scope-rnav :where(.v-list-item) { background: transparent !important; }
+.scope-rnav :where(.v-list-item:hover .v-list-item__overlay) {
+  background: var(--rnav-hover, var(--app-hover-color)) !important;
+  opacity: 1 !important;
+}
+
+/* Верхняя панель */
+.scope-hdr :where(.v-list) { background: transparent !important; }
+.scope-hdr :where(.v-list-item) { background: transparent !important; }
+.scope-hdr :where(.v-list-item:hover .v-list-item__overlay) {
+  background: var(--topnav-hover, var(--app-hover-color)) !important;
+  opacity: 1 !important;
+}
+
+/* Диалоги и Меню — отдельные поверхности; у меню добавим hover */
+:root :where(.menu-scope .v-list) { background: transparent !important; }
+:root :where(.menu-scope .v-list-item) { background: transparent !important; }
+:root :where(.menu-scope .v-list-item:hover .v-list-item__overlay) {
+  background: var(--app-hover-color) !important; /* нет отдельного --menu-hover */
+  opacity: 1 !important;
+}
+
+/* “Мой мини профиль” — выделим секцию mymini */
+.scope-mymini {
+  --v-theme-surface: var(--mymini-surface);
+  --v-theme-on-surface: var(--mymini-on-surface);
+  --v-theme-outline: var(--mymini-border);
+  --v-theme-surface-variant: var(--mymini-elev-1);
+}
+.scope-mymini :where(.v-list) { background: transparent !important; }
+.scope-mymini :where(.v-list-item) { background: transparent !important; }
+.scope-mymini :where(.v-list-item:hover .v-list-item__overlay) {
+  background: var(--mymini-hover, var(--app-hover-color)) !important;
+  opacity: 1 !important;
+}
+/* Стало: не трогаем .v-btn--variant-tonal */
+:root :where(.v-btn:not(.v-btn--variant-tonal) .v-btn__overlay) {
+  background: transparent !important;
+  opacity: 0 !important;
+  transition: opacity .18s ease, background-color .18s ease;
+}
+/* Если у айтема есть собственный баннер — не накладываем секционный overlay */
+:root :where(.item-has-banner .v-list-item__overlay) {
+  background: transparent !important;
+  opacity: 0 !important;
+}
+
+/* И на всякий случай — вырубаем hover-overlay по всем секциям для item-has-banner */
+:root :where(
+  .scope-lnav .item-has-banner .v-list-item__overlay,
+  .scope-main .item-has-banner .v-list-item__overlay,
+  .scope-rnav .item-has-banner .v-list-item__overlay,
+  .scope-hdr  .item-has-banner .v-list-item__overlay,
+  .menu-scope .item-has-banner .v-list-item__overlay
+) {
+  background: transparent !important;
+  opacity: 0 !important;
+}

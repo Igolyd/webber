@@ -57,8 +57,8 @@ export default defineComponent({
   name: "SettingsProfileUser",
   components: { SettingsPanel, ActionsBar },
   setup() {
-    const group = ref<GroupKey>("user");
-    const section = ref<SectionKey>("account");
+    const group = ref<GroupKey>("app");
+    const section = ref<SectionKey>("notifications");
     const Loading = {
       name: "SettingsAsyncLoading",
       render() {
@@ -164,8 +164,8 @@ export default defineComponent({
       section.value = payload.section;
     }
     if (!map[currentKey.value]) {
-      group.value = "user";
-      section.value = "account";
+      group.value = "app";
+      section.value = "notifications";
     }
     const saving = ref(false);
     const dirty = ref(false);

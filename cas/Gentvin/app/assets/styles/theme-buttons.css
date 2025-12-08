@@ -1,0 +1,60 @@
+/* assets/styles/theme-buttons.css */
+
+/* Базовая палитра для маппинга */
+:root {
+  /* На всякий случай значения по умолчанию */
+  --btn-primary-alpha: 18%;
+  --btn-primary-alpha-hover: 26%;
+  --btn-primary-alpha-active: 32%;
+
+  --btn-primary-strong-alpha: 26%;
+  --btn-primary-strong-alpha-hover: 34%;
+  --btn-primary-strong-alpha-active: 42%;
+
+  --btn-primary-border-alpha: 30%;
+  --btn-primary-border-alpha-strong: 40%;
+}
+
+/* Тональная primary-кнопка (иконки/кнопки-состояния) */
+.btn-primary-tonal {
+  --btn-base: var(--v-theme-primary);
+  background: color-mix(in oklab, var(--btn-base) var(--btn-primary-alpha), transparent) !important;
+  color: var(--app-text-color);
+  border: 1px solid color-mix(in oklab, var(--btn-base) var(--btn-primary-border-alpha), transparent) !important;
+  box-shadow: none !important;
+}
+.btn-primary-tonal:hover {
+  background: color-mix(in oklab, var(--btn-base) var(--btn-primary-alpha-hover), transparent) !important;
+}
+.btn-primary-tonal:active {
+  background: color-mix(in oklab, var(--btn-base) var(--btn-primary-alpha-active), transparent) !important;
+}
+
+/* «Поуверенней» (для основных CTA), но тоже не сплошная заливка */
+.btn-primary-elevated {
+  --btn-base: var(--v-theme-primary);
+  background: color-mix(in oklab, var(--btn-base) var(--btn-primary-strong-alpha), transparent) !important;
+  color: var(--app-text-color);
+  border: 1px solid color-mix(in oklab, var(--btn-base) var(--btn-primary-border-alpha-strong), transparent) !important;
+  box-shadow: 0 2px 10px color-mix(in oklab, var(--btn-base) 20%, transparent) !important;
+}
+.btn-primary-elevated:hover {
+  background: color-mix(in oklab, var(--btn-base) var(--btn-primary-strong-alpha-hover), transparent) !important;
+}
+.btn-primary-elevated:active {
+  background: color-mix(in oklab, var(--btn-base) var(--btn-primary-strong-alpha-active), transparent) !important;
+}
+
+/* Нейтральная “вариантная” серость из темы */
+.btn-surface-variant {
+  background: var(--lnav-hover, var(--app-hover-color)) !important;
+  color: var(--app-on-surface, var(--app-text-color));
+  border: 1px solid var(--app-border-color) !important;
+}
+
+/* Чтоб Vuetify не перебивал наши стили */
+.v-btn--variant-tonal.btn-primary-tonal,
+.v-btn--variant-elevated.btn-primary-elevated,
+.v-btn--variant-text.btn-primary-tonal {
+  background-clip: padding-box;
+}
